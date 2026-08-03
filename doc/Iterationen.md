@@ -21,7 +21,7 @@ Diese Datei wird nur vom Sensei verwendet. Es werden darin die Iterationen der A
 
 ## Iteration 1: Geschäftsregel Anspruch
 
-Der Benutzer hat keinen Anspruch.
+   * Der Benutzer hat keinen Anspruch.
 
 ## Iteration 1: Testfälle
 
@@ -30,7 +30,21 @@ Der Benutzer hat keinen Anspruch.
 ## Iteration 1: Hintergrund
 Anspruchsprüfung ist in der SV Bereich des Leistungswesen. Technisch wird es von der Applikation Leistung abgearbeitet.
 
-# Iteration 2: UseCase Elektronische Arbeitsunfähigkeit
+# Iteration 2: Eigenanspruch bei aktiver Versicherungszeit
+
+## Geschäftsregel
+Ergänzung der Regeln für den Anspruch:
+* Wenn eine Person eine aktive Versicherungszeit hat, dann hat sie Anspruch. Das ist z.B. durch eine unselbstständige
+  Beschäftigung gegeben. Ein Anspruch aus dieser Regel heißt Eigenanspruch.
+
+Versicherungszeiten werden im Versicherungswesen (Applikation MVB) verwaltet.
+Das Service `at.gepardec.dojo.zeiten.ZeitenService` stellt die Versicherungszeiten bereit.
+Eine Versicherungszeit ist aktiv, wenn das `bis`-Datum `null` ist.
+
+## Testfälle
+* Kurt hat Anspruch
+
+# Iteration 3: UseCase Elektronische Arbeitsunfähigkeit
 
 ## Stakeholder und Interessen
    * Benutzer: Möchte im Krankheitsfall keine bürokratischen Aufgaben erledigen müssen.
@@ -52,30 +66,15 @@ Anspruchsprüfung ist in der SV Bereich des Leistungswesen. Technisch wird es vo
       1. Das System speichert eine ensprechende Fehlermeldung in einer Error-Queue.
       2. Ein Sachbearbeiter bearbeitet in einem getrennen UseCase "Fehler bearbeiten" den Fehler.
  
-## Iteration 2: Geschäftsregel AUM speichern
+## Iteration 3: Geschäftsregel AUM speichern
    * Alle AU-Meldungen sind gültig 
 
-## Iteration 2: Testfälle
+## Iteration 3: Testfälle
    * Kurt geht am 6.8.2026 zum Arzt. Die AU-Meldung wird gespeichert.
 
-## Iteration 2: Hintergrund
+## Iteration 3: Hintergrund
 Krankmeldungen bzw. Arbeitsunfähiglkeit (AU) ist in der SV ein Bereich des Leistungswesen. 
 Technisch wird es von der Applikation Leistung abgearbeitet.
-
-# Iteration 3: Eigenanspruch bei aktiver Versicherungszeit
-
-## Geschäftsregel
-Ergänzung der Regeln für den Anspruch:
-   * Wenn eine Person eine aktive Versicherungszeit hat, dann hat sie Anspruch. Das ist z.B. durch eine unselbstständige
-     Beschäftigung gegeben. Ein Anspruch aus dieser Regel heißt Eigenanspruch.
-
-Versicherungszeiten werden im Versicherungswesen (Applikation MVB) verwaltet. 
-Das Service `at.gepardec.dojo.zeiten.ZeitenService` stellt die Versicherungszeiten bereit.
-Eine Versicherungszeit ist aktiv, wenn das `bis`-Datum `null` ist.
-
-## Testfälle
-   * Kurt hat Anspruch
-
 
 # Iteration 4: AU-Fälle düffen nur bei aktiven Anspruch gespeichert werden
 
