@@ -25,7 +25,7 @@ Diese Datei wird nur vom Sensei verwendet. Es werden darin die Iterationen der A
 
 ## Iteration 1: Testfälle
 
-   * Eduard hat keinen Anspruch
+   * Eberhard hat keinen Anspruch
 
 ## Iteration 1: Hintergrund
 Anspruchsprüfung ist in der SV Bereich des Leistungswesen. Technisch wird es von der Applikation Leistung abgearbeitet.
@@ -83,7 +83,7 @@ Ergänzung der Regeln für Arbeitsunfähigkeit:
    * Nur wenn eine Person einen aktiven Anspruch hat, dann ist die AU-Meldung gültig und darf damit gespeichert werden.
 
 ## Testfälle
-   * Eduard geht zum Arzt. Die elektronische Krankmeldung wird nicht gespeichert.
+   * Eberhard geht zum Arzt. Die elektronische Krankmeldung wird nicht gespeichert.
 
 
 # Iteration 5: Mitversicherung für Kinder
