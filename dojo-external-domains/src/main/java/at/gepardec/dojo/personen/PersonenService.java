@@ -18,7 +18,7 @@ public class PersonenService {
                         LocalDate.of(1985, 9, 13));
             }
             case TestData.SVNR_EBERHARD -> {
-                return new Person("Eduard", "Leonhardsberger",
+                return new Person("Eberhard", "Leonhardsberger",
                         LocalDate.of(2002, 4, 1));
             }
             case TestData.SVNR_ANGIE -> {
