@@ -6,4 +6,8 @@ public class Svnr {
     public Svnr(String svnr) {
         this.svnr = svnr;
     }
+
+    public String asString() {
+        return svnr;
+    }
 }

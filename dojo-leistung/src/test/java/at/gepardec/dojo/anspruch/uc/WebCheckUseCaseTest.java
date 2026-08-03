@@ -12,4 +12,10 @@ public class WebCheckUseCaseTest {
     void testEberhardKeinAnspruch() {
         assertEquals("Kein Anspruch", anspruch.check(TestData.SVNR_EBERHARD));
     }
+
+    @Test
+    void testKurtHatAnspruch() {
+        assertEquals("Anspruch vorhanden", anspruch.check(TestData.SVNR_KURT));
+    }
+
 }
