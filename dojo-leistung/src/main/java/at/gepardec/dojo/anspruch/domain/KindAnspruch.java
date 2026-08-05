@@ -1,5 +1,6 @@
 package at.gepardec.dojo.anspruch.domain;
 
+import at.gepardec.dojo.anspruch.ports.AnspruchRegeln;
 import at.gepardec.dojo.anspruch.ports.DomainPortFactory;
 import at.gepardec.dojo.anspruch.ports.PersonenDatenService;
 
@@ -8,15 +9,17 @@ import java.time.Period;
 
 public class KindAnspruch implements Anspruch {
     private PersonenDatenService personenDatenService = DomainPortFactory.getPersonenDatenService();
+    private AnspruchRegeln anspruchRegeln = DomainPortFactory.getAnspruchRegeln();
     private Anspruch eigenAnspruch = new EigenAnspruch();
 
     @Override
-    public boolean anspruch(Svnr kind) {
+    public boolean anspruch(Svnr svnr) {
 
-        if (alter(personenDatenService.getGeburtsDatum(kind)) > 18) {
+        int altersGrenzeKind = anspruchRegeln.getAltersgrenzeKind();
+        if (alter(personenDatenService.getGeburtsDatum(svnr)) > altersGrenzeKind) {
             return false;
         }
-        for (Svnr elternteil : personenDatenService.getEltern(kind)) {
+        for (Svnr elternteil : personenDatenService.getEltern(svnr)) {
             if ( eigenAnspruch.anspruch(elternteil) ) {
                 return true;
             }

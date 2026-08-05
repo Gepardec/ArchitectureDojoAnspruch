@@ -1,5 +1,6 @@
 package at.gepardec.dojo.anspruch.ports;
 
+import at.gepardec.dojo.anspruch.adapters.AnspruchRegelnImpl;
 import at.gepardec.dojo.anspruch.adapters.PersonenDatenServiceImpl;
 import at.gepardec.dojo.anspruch.adapters.ZeitenServiceImpl;
 
@@ -14,5 +15,9 @@ public class DomainPortFactory {
 
     public static PersonenDatenService getPersonenDatenService() {
         return new PersonenDatenServiceImpl();
+    }
+
+    public static AnspruchRegeln getAnspruchRegeln() {
+        return new AnspruchRegelnImpl();
     }
 }
