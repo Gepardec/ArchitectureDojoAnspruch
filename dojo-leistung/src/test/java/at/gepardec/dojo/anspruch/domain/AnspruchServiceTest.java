@@ -6,8 +6,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnspruchServiceTest {
-    private AnspruchService service = new AnspruchService();
+    private AnspruchService anspruchService = new AnspruchService();
     private Anspruch eigenAnspruch = new EigenAnspruch();
+    private Anspruch kinderAnspruch = new KindAnspruch();
 
     @Test
     void testEberhardKeinAnspruch() {
@@ -15,8 +16,9 @@ class AnspruchServiceTest {
     }
 
     @Test
-    void testKurtHatAnspruch() {
+    void testHatAnspruch() {
         hatAnspruch(TestData.SVNR_KURT);
+        hatAnspruch(TestData.SVNR_ANGIE);
     }
 
     @Test
@@ -26,11 +28,19 @@ class AnspruchServiceTest {
         assertFalse(eigenAnspruch.anspruch(new Svnr(TestData.SVNR_ANGIE)));
     }
 
+    @Test
+    void testKinderAnspruch() {
+        assertFalse(kinderAnspruch.anspruch(new Svnr(TestData.SVNR_KURT)), "Kurt ist kein Kind");
+        assertFalse(kinderAnspruch.anspruch(new Svnr(TestData.SVNR_MARIA)), "Maria ist kein Kind");
+        assertTrue(kinderAnspruch.anspruch(new Svnr(TestData.SVNR_ANGIE)), "Angie ist Kind von Kurt mit Eigenanspruch");
+        assertFalse(kinderAnspruch.anspruch(new Svnr(TestData.SVNR_EBERHARD)), "Eberhard ist zu alt");
+    }
+
     private void hatAnspruch(String svnr) {
-        assertTrue(service.hasAnspruch(new Svnr(svnr)));
+        assertTrue(anspruchService.hasAnspruch(new Svnr(svnr)));
     }
 
     private void keinAnspruch(String svnr) {
-        assertFalse(service.hasAnspruch(new Svnr(svnr)));
+        assertFalse(anspruchService.hasAnspruch(new Svnr(svnr)));
     }
 }
