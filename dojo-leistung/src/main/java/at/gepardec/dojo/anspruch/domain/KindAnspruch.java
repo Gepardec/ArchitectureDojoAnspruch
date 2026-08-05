@@ -3,6 +3,7 @@ package at.gepardec.dojo.anspruch.domain;
 import at.gepardec.dojo.anspruch.ports.AnspruchRegeln;
 import at.gepardec.dojo.anspruch.ports.DomainPortFactory;
 import at.gepardec.dojo.anspruch.ports.PersonenDatenService;
+import at.gepardec.dojo.anspruch.ports.SystemDaten;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -10,6 +11,7 @@ import java.time.Period;
 public class KindAnspruch implements Anspruch {
     private PersonenDatenService personenDatenService = DomainPortFactory.getPersonenDatenService();
     private AnspruchRegeln anspruchRegeln = DomainPortFactory.getAnspruchRegeln();
+    private SystemDaten systemDaten = DomainPortFactory.getSystemDaten();
     private Anspruch eigenAnspruch = new EigenAnspruch();
 
     @Override
@@ -28,7 +30,7 @@ public class KindAnspruch implements Anspruch {
     }
 
     private int alter(LocalDate geburtsDatum) {
-        return Period.between(geburtsDatum, LocalDate.now()).getYears();
+        return Period.between(geburtsDatum, systemDaten.today()).getYears();
     }
 }
 
