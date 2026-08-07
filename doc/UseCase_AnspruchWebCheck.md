@@ -36,3 +36,17 @@ Dies ist ein Use Case aus dem Leistungswesen der Sozialversicherung im Bereich A
 
 ## Iteration 1: Hintergrund
 Anspruchsprüfung ist in der SV Bereich des Leistungswesen. Technisch wird es von der Applikation Leistung abgearbeitet.
+
+
+## Iteration 2: Eigenanspruch bei aktiver Versicherungszeit
+
+## Geschäftsregel
+Ergänzung der Regeln für den Anspruch:
+Wenn eine Person eine aktive Versicherungszeit hat, dann hat sie Anspruch. Das ist z.B. durch eine unselbstständige
+Beschäftigung gegeben. Ein Anspruch aus dieser Regel heißt Eigenanspruch.
+Versicherungszeiten werden im Versicherungswesen (Applikation MVB) verwaltet.
+Das Service at.gepardec.dojo.zeiten.ZeitenService stellt die Versicherungszeiten bereit.
+Eine Versicherungszeit ist aktiv, wenn das bis-Datum null ist.
+
+## Testfälle
+Kurt hat Anspruch
