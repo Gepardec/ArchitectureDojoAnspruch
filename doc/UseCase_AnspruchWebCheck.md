@@ -50,3 +50,15 @@ Eine Versicherungszeit ist aktiv, wenn das bis-Datum null ist.
 
 ## Testfälle
 Kurt hat Anspruch
+
+Iteration 5: Mitversicherung für Kinder
+Geschäftsregel
+Ergänzung der Regeln für den Anspruch:
+Kinder unter 18 Jahren haben Anspruch, wenn mindestens ein Elternteil einen Eigenanspruch hat.
+D.h. Ein Elternteil hat eine aktive Versicherungszeit.
+Das Geburtsdatum aus dem Service at.gepardec.dojo.personen.PersonenService (Applikation ZPV) erhalten.
+Die Verwandschaftsbeziehung wird aus dem Service at.gepardec.dojo.angehoerige.AngehoerigeService erhalten.
+Die Eigenschaft at.gepardec.dojo.angehoerige.AngehoerigenBeziehung.angehoerigerTyp muss
+at.gepardec.dojo.angehoerige.AngehoerigenBeziehung.ANG_TYP_ELTERNTEILsein.
+Testfälle
+Angie hat Anspruch. Im UseCase Anspruch Web Check kann sie ihren Anspruch prüfen.

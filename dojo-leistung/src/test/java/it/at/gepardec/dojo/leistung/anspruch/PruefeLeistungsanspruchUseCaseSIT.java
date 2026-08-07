@@ -1,9 +1,11 @@
 package it.at.gepardec.dojo.leistung.anspruch;
 
+import at.gepardec.dojo.angehoerige.AngehoerigeService;
 import at.gepardec.dojo.leistung.anspruch.application.PruefeLeistungsanspruchQueryHandler;
 import at.gepardec.dojo.leistung.anspruch.application.port.PruefeLeistungsanspruchUseCase;
 import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.VersicherterAdapter;
+import at.gepardec.dojo.personen.PersonenService;
 import at.gepardec.dojo.test.TestData;
 import at.gepardec.dojo.zeiten.ZeitenService;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +19,9 @@ class PruefeLeistungsanspruchUseCaseSIT {
     @BeforeEach
     void setUp() {
         ZeitenService zeitenService = new ZeitenService();
-        VersicherterAdapter repository = new VersicherterAdapter(zeitenService);
+        PersonenService personenService = new PersonenService();
+        AngehoerigeService angehoerigeService = new AngehoerigeService();
+        VersicherterAdapter repository = new VersicherterAdapter(zeitenService, personenService, angehoerigeService);
         useCase = new PruefeLeistungsanspruchQueryHandler(repository);
     }
 
@@ -37,6 +41,18 @@ class PruefeLeistungsanspruchUseCaseSIT {
     void testHatAnspruch_Kurt() {
         // given
         Svnr svnr = new Svnr(TestData.SVNR_KURT);
+
+        // when
+        boolean anspruch = useCase.hatLeistungsanspruch(svnr);
+
+        // then
+        assertThat(anspruch).isTrue();
+    }
+
+    @Test
+    void testHatAnspruch_Angie() {
+        // given
+        Svnr svnr = new Svnr(TestData.SVNR_ANGIE);
 
         // when
         boolean anspruch = useCase.hatLeistungsanspruch(svnr);

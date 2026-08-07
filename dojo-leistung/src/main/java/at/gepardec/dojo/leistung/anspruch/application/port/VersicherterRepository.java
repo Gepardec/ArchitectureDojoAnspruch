@@ -4,5 +4,5 @@ import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.leistung.anspruch.domain.Versicherter;
 
 public interface VersicherterRepository {
-    Versicherter getBySvnr(Svnr svnr);
+    Versicherter findBySvnr(Svnr svnr);
 }

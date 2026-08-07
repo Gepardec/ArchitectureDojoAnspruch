@@ -4,6 +4,7 @@ import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.test.TestData;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -14,7 +15,7 @@ class VersicherterTest {
         // given
 
         // when
-        Versicherter versicherter = Versicherter.fromVersicherungszeiten(new Svnr(TestData.SVNR_EBERHARD), List.of());
+        Versicherter versicherter = Versicherter.fromVersicherungszeiten(new Svnr(TestData.SVNR_EBERHARD), LocalDate.of(2000,1,1), List.of());
 
         // then
         assertThat(versicherter).isNotNull();

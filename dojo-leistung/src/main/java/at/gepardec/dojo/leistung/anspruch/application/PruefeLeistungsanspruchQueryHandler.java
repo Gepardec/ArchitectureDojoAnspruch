@@ -19,7 +19,9 @@ public class PruefeLeistungsanspruchQueryHandler implements PruefeLeistungsanspr
     public boolean hatLeistungsanspruch(Svnr svnr) {
         Objects.requireNonNull(svnr);
 
-        Versicherter versicherter = repository.getBySvnr(svnr);
+        Versicherter versicherter = repository.findBySvnr(svnr);
+        if(versicherter == null) return false;
+
         return versicherter.isVersichert(LocalDate.now());
     }
 }

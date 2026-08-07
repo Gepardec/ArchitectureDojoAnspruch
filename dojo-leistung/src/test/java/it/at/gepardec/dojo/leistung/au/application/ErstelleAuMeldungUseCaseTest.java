@@ -1,5 +1,6 @@
 package it.at.gepardec.dojo.leistung.au.application;
 
+import at.gepardec.dojo.angehoerige.AngehoerigeService;
 import at.gepardec.dojo.leistung.anspruch.application.PruefeLeistungsanspruchQueryHandler;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.VersicherterAdapter;
 import at.gepardec.dojo.leistung.au.application.ErstelleAuMeldungCommandHandler;
@@ -8,6 +9,7 @@ import at.gepardec.dojo.leistung.au.application.port.ErstelleAuMeldungUseCase;
 import at.gepardec.dojo.leistung.au.infrastructure.JpaAuMeldungRepository;
 import at.gepardec.dojo.leistung.au.infrastructure.LeistungsanspruchPruefungAdapter;
 import at.gepardec.dojo.leistung.shared.domain.Svnr;
+import at.gepardec.dojo.personen.PersonenService;
 import at.gepardec.dojo.test.TestData;
 import at.gepardec.dojo.zeiten.ZeitenService;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +23,7 @@ class ErstelleAuMeldungUseCaseTest {
     @BeforeEach
     void setUp() {
         JpaAuMeldungRepository repository = new JpaAuMeldungRepository();
-        VersicherterAdapter versicherterAdapter = new VersicherterAdapter(new ZeitenService());
+        VersicherterAdapter versicherterAdapter = new VersicherterAdapter(new ZeitenService(), new PersonenService(), new AngehoerigeService());
         PruefeLeistungsanspruchQueryHandler queryHandler = new PruefeLeistungsanspruchQueryHandler(versicherterAdapter);
         LeistungsanspruchPruefungAdapter anspruchPruefungPort = new LeistungsanspruchPruefungAdapter(queryHandler);
         useCase = new ErstelleAuMeldungCommandHandler(repository, anspruchPruefungPort);
