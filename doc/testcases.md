@@ -3,7 +3,7 @@ Testfälle für Anspruch Dojo
 
 Wir schreiben das Jahr 2026. Unsere Geschichte dreht sich um die traditionelle österreichische Familie Leonhardsberger. 
 
-Vater [Kurt](https://www.youtube.com/watch?v=BrPcg8y2-5E) arbeitet in einem Sägewerk und Mutter [Maria](https://www.youtube.com/watch?v=DyofWTw0bqY) ist Hausfrau. Die beiden sind seit 17 Jahren verheitatet.
+Vater [Kurt](https://www.youtube.com/watch?v=BrPcg8y2-5E) arbeitet in einem Sägewerk und Mutter [Maria](https://www.youtube.com/watch?v=DyofWTw0bqY) ist Hausfrau. Die beiden sind seit 17 Jahren verheiratet.
 
 Die Tochter [Angie](https://www.youtube.com/watch?v=oWRr03VcA-0) wohnt mit 16 noch bei den Eltern und geht zur Schule. 
 Der Sohn Eberhard ist 24 Jahre alt, hat sich mit den Eltern zerstritten und nie was gearbeitet. Er wohnt als [Sandlerkönig Eberhard](https://www.youtube.com/watch?v=Ha-ROALzCYM) auf der Straße.
