@@ -2,7 +2,7 @@ package at.gepardec.dojo.leistung.anspruch.application;
 
 import at.gepardec.dojo.leistung.anspruch.application.port.PruefeLeistungsanspruchUseCase;
 import at.gepardec.dojo.leistung.anspruch.application.port.VersicherterRepository;
-import at.gepardec.dojo.leistung.anspruch.domain.Svnr;
+import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.leistung.anspruch.domain.Versicherter;
 
 import java.time.LocalDate;

@@ -1,5 +1,7 @@
 package at.gepardec.dojo.leistung.anspruch.domain;
 
+import at.gepardec.dojo.leistung.shared.domain.Svnr;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

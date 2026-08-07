@@ -1,5 +1,6 @@
 package at.gepardec.dojo.leistung.anspruch.domain;
 
+import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.test.TestData;
 import org.junit.jupiter.api.Test;
 

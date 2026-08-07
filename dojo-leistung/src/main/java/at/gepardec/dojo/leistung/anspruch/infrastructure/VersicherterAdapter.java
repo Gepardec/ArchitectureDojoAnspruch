@@ -2,7 +2,7 @@ package at.gepardec.dojo.leistung.anspruch.infrastructure;
 
 import at.gepardec.dojo.leistung.anspruch.application.port.VersicherterRepository;
 import at.gepardec.dojo.leistung.anspruch.domain.AVersicherungszeit;
-import at.gepardec.dojo.leistung.anspruch.domain.Svnr;
+import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.leistung.anspruch.domain.Versicherter;
 import at.gepardec.dojo.zeiten.VersicherungsZeit;
 import at.gepardec.dojo.zeiten.ZeitenService;

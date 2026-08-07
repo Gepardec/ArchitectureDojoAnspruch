@@ -2,7 +2,7 @@ package it.at.gepardec.dojo.leistung.anspruch;
 
 import at.gepardec.dojo.leistung.anspruch.application.PruefeLeistungsanspruchQueryHandler;
 import at.gepardec.dojo.leistung.anspruch.application.port.PruefeLeistungsanspruchUseCase;
-import at.gepardec.dojo.leistung.anspruch.domain.Svnr;
+import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.VersicherterAdapter;
 import at.gepardec.dojo.test.TestData;
 import at.gepardec.dojo.zeiten.ZeitenService;

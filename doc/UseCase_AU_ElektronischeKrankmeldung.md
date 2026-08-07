@@ -9,4 +9,34 @@ Dies ist ein Use Case aus dem Leistungswesen der Sozialversicherung im Bereich A
    * Ebene: User Goal
    * Primärer Akteur: Arzt 
 
-*Hier UsecaseBeschreibung einfügen*
+# Iteration 3: UseCase Elektronische Arbeitsunfähigkeit
+
+## Stakeholder und Interessen
+ * Benutzer: Möchte im Krankheitsfall keine bürokratischen Aufgaben erledigen müssen.
+   * Arzt: Möchte dem Benutzer ein gutes und einfaches Service bieten.
+   * Sozialversicherung: Möchte AU-Daten in elektronischer Form erhalten um weniger Arbeitsaufwand zu haben.
+
+## Vorbedingungen
+   * Arzt hat Software, die eAUM-fähig ist.
+   * Technische Verbindung mittels Messaging zwischen Arzt und SV ist vorhanden.
+   * Der Arzt hat den Patienten untersucht und will ihn krankschreiben.
+
+## Hauptszenario
+   1. Der Arzt gibt das Datum der Krankmeldung und die SVNR des Patienten in die Arztsoftware ein.
+   2. Das System sendet die Daten (AU-Beginn, SVNR) an die Sozialversicherung.
+   3. Die Sozialversicherung speichert die Daten in der Datenbank.
+ 
+## Nebenszenario 1
+   3. Wenn die AU-Meldung ungültig ist: 
+      1. Das System speichert eine ensprechende Fehlermeldung in einer Error-Queue.
+      2. Ein Sachbearbeiter bearbeitet in einem getrennen UseCase "Fehler bearbeiten" den Fehler.
+ 
+## Iteration 3: Geschäftsregel AUM speichern
+   * Alle AU-Meldungen sind gültig 
+
+## Iteration 3: Testfälle
+   * Kurt geht am 6.8.2026 zum Arzt. Die AU-Meldung wird gespeichert.
+
+## Iteration 3: Hintergrund
+Krankmeldungen bzw. Arbeitsunfähiglkeit (AU) ist in der SV ein Bereich des Leistungswesen. 
+Technisch wird es von der Applikation Leistung abgearbeitet.
