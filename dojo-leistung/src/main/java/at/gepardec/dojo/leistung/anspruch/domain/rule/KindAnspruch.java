@@ -2,6 +2,7 @@ package at.gepardec.dojo.leistung.anspruch.domain.rule;
 
 import at.gepardec.dojo.leistung.anspruch.domain.port.AngehoerigePort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.PersonenPort;
+import at.gepardec.dojo.leistung.anspruch.domain.port.RegelwerkPort;
 import at.gepardec.dojo.leistung.shared.domain.Svnr;
 
 import java.time.LocalDate;
@@ -16,21 +17,22 @@ import java.util.Optional;
  * Anspruch. Ein Elternteil, das selbst nur mitversichert ist, begründet keinen Anspruch des
  * Kindes.
  * <p>
- * Die Altersgrenze steht vorerst als Konstante hier. Der Change {@code add-regelwerk-port}
- * (Iteration 6) ersetzt sie durch einen Port -- der Diff zeigt dann, was ein konfigurierbares
- * Regelwerk in dieser Variante kostet.
+ * Die Altersgrenze kommt seit {@code add-regelwerk-port} (Iteration 6) aus dem Regelwerk. Die
+ * Regel holt sie sich selbst -- die aufrufenden Schichten wissen nichts davon, dass diese Regel
+ * überhaupt einen Regelparameter braucht.
  */
 public class KindAnspruch implements Anspruch {
 
-    static final int ALTERSGRENZE_JAHRE = 18;
-
     private final PersonenPort personenPort;
     private final AngehoerigePort angehoerigePort;
+    private final RegelwerkPort regelwerkPort;
     private final Anspruch eigenAnspruch;
 
-    public KindAnspruch(PersonenPort personenPort, AngehoerigePort angehoerigePort, Anspruch eigenAnspruch) {
+    public KindAnspruch(PersonenPort personenPort, AngehoerigePort angehoerigePort,
+                        RegelwerkPort regelwerkPort, Anspruch eigenAnspruch) {
         this.personenPort = Objects.requireNonNull(personenPort, "personenPort");
         this.angehoerigePort = Objects.requireNonNull(angehoerigePort, "angehoerigePort");
+        this.regelwerkPort = Objects.requireNonNull(regelwerkPort, "regelwerkPort");
         this.eigenAnspruch = Objects.requireNonNull(eigenAnspruch, "eigenAnspruch");
     }
 
@@ -52,10 +54,11 @@ public class KindAnspruch implements Anspruch {
     }
 
     /**
-     * "Unter" der Grenze, nicht "bis einschließlich": Am Tag des 18. Geburtstags ist die Grenze
-     * erreicht und der Kindanspruch endet.
+     * "Unter" der Grenze, nicht "bis einschließlich": Am Tag, an dem die Grenze erreicht wird,
+     * endet der Kindanspruch.
      */
     private boolean istUnterAltersgrenze(LocalDate geburtsdatum, LocalDate stichtag) {
-        return geburtsdatum.plusYears(ALTERSGRENZE_JAHRE).isAfter(stichtag);
+        int altersgrenze = regelwerkPort.altersgrenzeMitversicherung();
+        return geburtsdatum.plusYears(altersgrenze).isAfter(stichtag);
     }
 }

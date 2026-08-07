@@ -18,3 +18,9 @@ Dieses Dokument beschreibt die Geschäftsregeln für den Bereich Anspruch aus de
 ## Iteration 7: Stichtag
    * Die Anspruchsprüfung erfolgt zu einem Stichtag. Im Regelbetrieb ist das der heutige Tag.
    * Für Tests ist der Stichtag vorgebbar; verwendet wird der 5.8.2026.
+
+## Iteration 6: Regelwerk
+   * Die Altersgrenze der Mitversicherung ist kein fester Wert im Programm, sondern ein
+     Regelparameter, den die Fachabteilung pflegt.
+   * Fachlicher Vorgabewert: 18 Jahre.
+   * Fehlt der Parameter, bricht die Anspruchsprüfung mit einem Fehler ab.

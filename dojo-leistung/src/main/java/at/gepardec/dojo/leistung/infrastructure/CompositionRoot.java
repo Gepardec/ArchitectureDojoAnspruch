@@ -6,6 +6,7 @@ import at.gepardec.dojo.leistung.anspruch.application.PruefeAnspruchUseCase;
 import at.gepardec.dojo.leistung.anspruch.domain.AnspruchService;
 import at.gepardec.dojo.leistung.anspruch.domain.port.AngehoerigePort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.PersonenPort;
+import at.gepardec.dojo.leistung.anspruch.domain.port.RegelwerkPort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.ZeitPort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.ZeitenPort;
 import at.gepardec.dojo.leistung.anspruch.domain.rule.Anspruch;
@@ -15,6 +16,7 @@ import at.gepardec.dojo.leistung.anspruch.infrastructure.AngehoerigeAdapter;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.SystemZeitAdapter;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.AnspruchWebCheck;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.PersonenAdapter;
+import at.gepardec.dojo.leistung.anspruch.infrastructure.RegelwerkAdapter;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.ZeitenAdapter;
 import at.gepardec.dojo.leistung.au.application.ErstelleAuMeldungService;
 import at.gepardec.dojo.leistung.au.application.ErstelleAuMeldungUseCase;
@@ -63,11 +65,12 @@ public class CompositionRoot {
         ZeitenPort zeitenPort = new ZeitenAdapter(new ZeitenService());
         PersonenPort personenPort = new PersonenAdapter(new PersonenService());
         AngehoerigePort angehoerigePort = new AngehoerigeAdapter(new AngehoerigeService());
+        RegelwerkPort regelwerkPort = new RegelwerkAdapter();
 
         // --- Anspruch: Regelkatalog ---
         // Eine weitere Anspruchsart wird hier ergaenzt; bestehende Klassen bleiben unberuehrt.
         Anspruch eigenAnspruch = new EigenAnspruch(zeitenPort);
-        Anspruch kindAnspruch = new KindAnspruch(personenPort, angehoerigePort, eigenAnspruch);
+        Anspruch kindAnspruch = new KindAnspruch(personenPort, angehoerigePort, regelwerkPort, eigenAnspruch);
         AnspruchService anspruchService = new AnspruchService(List.of(eigenAnspruch, kindAnspruch));
 
         PruefeAnspruchUseCase pruefeAnspruch = new PruefeAnspruchService(anspruchService, zeitPort);

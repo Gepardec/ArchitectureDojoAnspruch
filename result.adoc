@@ -1,0 +1,1366 @@
+= Architektur-Dojo Anspruch: Gruppenlösung `feature/dojo1` vs. Referenzlösung `feature/solution1`
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+
+[NOTE]
+====
+Die Diagramme sind Mermaid-Blöcke. Zur Darstellung als Grafik wird `asciidoctor-diagram` bzw.
+Kroki benötigt (im IntelliJ-AsciiDoc-Plugin über _Settings → Languages & Frameworks → AsciiDoc →
+Enable Kroki_). Ohne Renderer bleibt der Diagrammquelltext lesbar.
+====
+
+== Umfang und Methode
+
+Verglichen werden eine Gruppenlösung und die Referenzlösung des Sensei:
+
+[cols="1,1,2,2",options="header"]
+|===
+| Branch | Autor | Letzter Commit | Stand
+
+| `feature/dojo1`
+| Sascha Pöcksteiner (Implementierer)
+| `a7ce76d` -- _iteration 5: Mitversicherte bei Anspruchsprüfung_
+| Fachliche Iterationen 1--5
+
+| `feature/solution1`
+| Erhard Siegl (Autor des Basis-Repos und der Aufgabenstellung)
+| `978e2e2` -- _Minor cleanup_
+| Fachliche Iterationen 1--5 **plus** Architekturvorgaben 6--7
+|===
+
+`feature/solution1` stammt vom selben Autor wie das Basis-Projekt, die Testdaten und die
+Iterationsbeschreibungen, ist also als **Referenzlösung** zu lesen, nicht als Ergebnis einer
+Implementierer-Gruppe. Das ist bei der Bewertung berücksichtigt: Der in `doc/README.md`
+beschriebene Gruppenablauf (Doku pro Iteration ergänzen und gemeinsam committen) gilt für die
+Referenzlösung nicht, und sie darf mehr Iterationen abdecken.
+
+=== Was tatsächlich gemacht wurde
+
+Beide Branches wurden ausgecheckt, gebaut und getestet (`mvn test`), Quelltexte vollständig gelesen.
+Zusätzlich wurden temporäre Probe-Tests gegen beide Lösungen ausgeführt, um Randfälle empirisch
+zu belegen statt sie nur zu behaupten. Diese Probes wurden nach der Messung wieder entfernt.
+
+[cols="2,1,1",options="header"]
+|===
+| Messung | `dojo1` | `solution1`
+
+| `mvn test` -- Tests in `dojo-leistung` | 19 grün | 9 grün
+| Java-Dateien `src/main` | 18 | 19
+| Zeilen `src/main` | 357 | 301
+| Java-Dateien `src/test` | 11 | 3
+| Zeilen `src/test` | 355 | 119
+|===
+
+=== Wichtige Einordnung vorab: gleicher fachlicher Umfang
+
+Die Commit-Nummerierung der beiden Branches weicht voneinander und von der Sensei-Datei ab
+(`dojo1` hat Iteration 2/3 anders geschnitten als `solution1`). Nach Inhalt statt Nummer sortiert
+ergibt sich:
+
+[cols="3,1,1",options="header"]
+|===
+| Iteration (nach Sensei-Datei) | `dojo1` | `solution1`
+
+| 1 -- Kein Anspruch / UC Web Check | ✔ | ✔
+| 2 -- UC Elektronische AU, Meldung speichern | ✔ | ✔
+| 3 -- Eigenanspruch bei aktiver Versicherungszeit | ✔ | ✔
+| 4 -- AU nur bei aktivem Anspruch | ✔ | ✔
+| 5 -- Mitversicherung für Kinder | ✔ | ✔
+| 6 -- Regelwerk (Altersgrenze konfigurierbar) | ✖ | (✔) nur Seam, siehe unten
+| 7 -- Teststabilität (Tagesdatum vorgebbar) | ✖ | ✔
+|===
+
+**Der fachliche Umfang ist identisch.** `solution1` hat zusätzlich die beiden reinen
+*Architekturvorgaben* 6 und 7 umgesetzt. Das ist beim Lesen der folgenden Kapitel entscheidend:
+Jede Feststellung ist deshalb markiert als
+
+* [.underline]#Design# -- ein echter Gestaltungsunterschied bei gleichem Umfang, und
+* [.underline]#Scope# -- ein Unterschied, der nur daher rührt, dass Iteration 6/7 in einem Branch
+  fehlt.
+
+Ein injizierbares Tagesdatum als "besseres Design" von `solution1` zu verkaufen, wäre eine
+Scope-Differenz im Design-Kostüm. Was sich stattdessen fair beurteilen lässt, ist:
+_wie gut war jedes Design darauf vorbereitet, 6 und 7 aufzunehmen?_ (siehe <<iteration67>>).
+
+== Überblick: zwei unterschiedliche Auslegungen von "hexagonal"
+
+[cols="1,2,2",options="header"]
+|===
+| Aspekt | `dojo1` | `solution1`
+
+| Package-Wurzel
+| `at.gepardec.dojo.leistung.{anspruch,au,shared}`
+| `at.gepardec.dojo.{anspruch,au}`
+
+| Schichten-Idiom
+| `api` / `application` (+ `application.port`) / `domain` / `infrastructure`
+| `uc` / `domain` / `ports` / `adapters`
+
+| Wo liegen die Ports?
+| in `application.port`, getrennt nach Driving (UseCase) und Driven (Repository)
+| in `ports`, ausschließlich Driven; kein Driving-Port
+
+| Wie kommen Abhängigkeiten in die Objekte?
+| Constructor Injection
+| Service Locator (`DomainPortFactory`, statisch)
+
+| Kontext-Kopplung `au` → `anspruch`
+| eigener Port + Adapter (Anti-Corruption Layer)
+| direkter `new AnspruchService()` in `au.domain`
+
+| Hexagon im Kontext `au`
+| vollständig (api/application/port/domain/infrastructure)
+| nur `domain`
+
+| Fachlogik-Erweiterbarkeit
+| Methoden auf dem Aggregat `Versicherter`
+| Strategie-Interface `Anspruch` mit Implementierungen
+
+| Wiring / Composition Root
+| in den Tests, von Hand
+| statische Factory
+
+| Tests
+| viele Klassen, überwiegend leere Rümpfe
+| wenige Klassen, durchgängig mit Assertions
+|===
+
+Beide Lösungen sind praktisch gleich groß (18 vs. 19 Klassen, 357 vs. 301 Zeilen) und haben
+trotzdem eine sehr unterschiedliche Form. Genau das ist der interessante Teil.
+
+== Lösung `dojo1`
+
+=== Struktur
+
+[mermaid]
+....
+flowchart TB
+  subgraph anspruch["leistung.anspruch"]
+    A_api["api<br/>LeistungsanspruchRESTService"]
+    A_port["application.port<br/>PruefeLeistungsanspruchUseCase (driving)<br/>VersicherterRepository (driven)"]
+    A_app["application<br/>PruefeLeistungsanspruchQueryHandler"]
+    A_dom["domain<br/>Versicherter, AVersicherungszeit"]
+    A_inf["infrastructure<br/>VersicherterAdapter"]
+  end
+  subgraph au["leistung.au"]
+    U_api["api<br/>AuRESTController"]
+    U_port["application.port<br/>ErstelleAuMeldungUseCase (driving)<br/>AuMeldungRepository (driven)<br/>LeistungsanspruchPruefungPort (driven)"]
+    U_app["application<br/>ErstelleAuMeldungCommandHandler"]
+    U_dom["domain<br/>AuMeldung"]
+    U_inf["infrastructure<br/>JpaAuMeldungRepository<br/>LeistungsanspruchPruefungAdapter"]
+  end
+  S["shared.domain<br/>Svnr"]
+  EXT["Umsysteme<br/>ZeitenService / PersonenService / AngehoerigeService"]
+
+  A_api --> A_port
+  A_app -.implements.-> A_port
+  A_app --> A_dom
+  A_inf -.implements.-> A_port
+  A_inf --> A_dom
+  A_inf --> EXT
+
+  U_api --> U_port
+  U_app -.implements.-> U_port
+  U_app --> U_dom
+  U_inf -.implements.-> U_port
+  U_inf --> A_port
+
+  A_dom --> S
+  U_dom --> S
+....
+
+Kernidee: Jeder Kontext ist ein eigenes, vollständiges Hexagon. `application.port` ist der nach
+innen gerichtete Vertrag; nach außen zeigende Pfeile gibt es nur aus `infrastructure`.
+
+=== Ablauf: AU-Meldung anlegen (Iteration 4)
+
+[mermaid]
+....
+sequenceDiagram
+  participant C as AuRESTController
+  participant H as ErstelleAuMeldungCommandHandler
+  participant P as LeistungsanspruchPruefungPort
+  participant AD as LeistungsanspruchPruefungAdapter
+  participant Q as PruefeLeistungsanspruchQueryHandler
+  participant R as VersicherterRepository
+  participant V as Versicherter
+  participant DB as AuMeldungRepository
+
+  C->>H: erstelleAuMeldung Command
+  H->>P: pruefeAnspruch Svnr
+  P->>AD: Adapter im Kontext au
+  AD->>Q: hatLeistungsanspruch Svnr
+  Q->>R: findBySvnr Svnr
+  R-->>Q: Versicherter
+  Q->>V: isVersichert LocalDate.now
+  V-->>Q: true / false
+  alt Anspruch vorhanden
+    H->>DB: speichere AuMeldung
+  else kein Anspruch
+    H->>H: log.info, keine Rueckmeldung
+  end
+....
+
+Die drei Zwischenschritte `Port → Adapter → fremder UseCase` sind der bewusste Preis dafür, dass
+`au` den Kontext `anspruch` nicht kennt: `au` definiert, was es braucht (`pruefeAnspruch`), und ein
+Adapter übersetzt das auf das, was `anspruch` anbietet.
+
+== Lösung `solution1`
+
+=== Struktur
+
+[mermaid]
+....
+flowchart TB
+  subgraph anspruch["anspruch"]
+    S_uc["uc<br/>AnspruchWebCheck"]
+    S_dom["domain<br/>AnspruchService<br/>Anspruch (Interface)<br/>EigenAnspruch, KindAnspruch<br/>Svnr, ZeitenStrecke"]
+    S_ports["ports<br/>ZeitenService, PersonenDatenService<br/>AnspruchRegeln, SystemDaten<br/>DomainPortFactory"]
+    S_ad["adapters<br/>ZeitenServiceImpl, PersonenDatenServiceImpl<br/>AnspruchRegelnImpl, SystemDatenImpl"]
+  end
+  subgraph au["au"]
+    U_dom["domain<br/>AUService, Meldung<br/>KeinAnspruchException"]
+  end
+  EXT["Umsysteme<br/>ZeitenService / PersonenService / AngehoerigeService"]
+
+  S_uc --> S_dom
+  S_dom --> S_ports
+  S_ports -->|Service Locator| S_ad
+  S_ad -.implements.-> S_ports
+  S_ad --> EXT
+  U_dom -->|new AnspruchService| S_dom
+....
+
+Zwei Dinge fallen sofort auf:
+
+. Der Pfeil `ports → adapters` läuft **nach außen**. `DomainPortFactory` liegt im Package `ports`
+  und importiert alle vier Adapter-Implementierungen. Die Portschicht kennt damit ihre Adapter --
+  der Zyklus, den Ports & Adapters gerade auflösen soll, ist auf Package-Ebene wieder da.
+. Der Kontext `au` besteht ausschließlich aus `domain`. Kein Port, kein Adapter, kein `uc`,
+  keine Persistenz.
+
+=== Ablauf: AU-Meldung anlegen
+
+[mermaid]
+....
+sequenceDiagram
+  participant T as Aufrufer / Test
+  participant A as AUService (au.domain)
+  participant AS as AnspruchService (anspruch.domain)
+  participant K as EigenAnspruch / KindAnspruch
+  participant F as DomainPortFactory
+  participant AD as Adapter
+
+  T->>A: anlegen Meldung
+  A->>AS: new AnspruchService, dann hasAnspruch Svnr
+  AS->>K: anspruch Svnr
+  K->>F: getZeitenService / getPersonenDatenService
+  F-->>K: Adapter-Instanz
+  K->>AD: getVersicherungsZeiten / getGeburtsDatum
+  AD-->>K: Domänen-Records
+  K-->>AS: boolean
+  AS-->>A: boolean
+  alt Anspruch vorhanden
+    A->>A: log.info Meldung wurde gespeichert
+  else kein Anspruch
+    A->>T: throw KeinAnspruchException
+  end
+....
+
+=== Das Strategie-Muster für Anspruchsarten
+
+Der eleganteste Teil von `solution1`:
+
+[mermaid]
+....
+classDiagram
+  class Anspruch {
+    <<interface>>
+    +anspruch(Svnr) boolean
+  }
+  class AnspruchService {
+    +hasAnspruch(Svnr) boolean
+  }
+  class EigenAnspruch
+  class KindAnspruch
+
+  Anspruch <|.. EigenAnspruch
+  Anspruch <|.. KindAnspruch
+  AnspruchService --> Anspruch
+  KindAnspruch --> EigenAnspruch : prüft Eltern
+....
+
+Jede neue Anspruchsart (Ehepartner-Mitversicherung, Pensionisten, Studenten ...) ist eine neue
+Klasse plus eine Zeile in `AnspruchService`. Der fachliche Begriff "Eigenanspruch" aus
+`doc/GeschäftsRegeln_Anspruch.md` hat eine gleichnamige Klasse -- die Geschäftsregel ist im Code
+nachschlagbar.
+
+== Direkter Vergleich bei gleichem Umfang
+
+=== Abhängigkeitsrichtung -- der eigentliche Prüfpunkt des Dojos
+
+[.underline]#Design#
+
+`dojo1` hält die Regel sauber: Nur `infrastructure` importiert
+`at.gepardec.dojo.{zeiten,personen,angehoerige}`. Verifiziert per `grep` über `src/main` -- die
+einzige weitere externe Referenz ist `svnr.SvnrValidator` aus `shared.domain.Svnr`, und das ist
+eine Utility, kein Umsystem.
+
+`solution1` hält die *äußere* Grenze ebenfalls sauber (nur `adapters` sehen die Umsysteme), bricht
+sie aber *innen*: `ports.DomainPortFactory` importiert `adapters.*`. Damit gibt es keine
+Konstellation, in der man `domain` + `ports` ohne `adapters` kompilieren könnte -- der Test, ob ein
+Hexagon wirklich eins ist.
+
+=== Ports: Driving vs. Driven
+
+[.underline]#Design#
+
+`dojo1` modelliert beide Portarten. `PruefeLeistungsanspruchUseCase` und
+`ErstelleAuMeldungUseCase` sind Driving Ports, `VersicherterRepository`, `AuMeldungRepository`,
+`LeistungsanspruchPruefungPort` sind Driven Ports. Der Nutzen ist im AU-Kontext direkt sichtbar:
+Weil `anspruch` einen Driving Port hat, kann `au` ihn hinter einem eigenen Port kapseln.
+
+`solution1` hat nur Driven Ports. `AnspruchWebCheck` und `AUService` greifen direkt auf konkrete
+Klassen zu. Das kostet eine Abstraktion, die man auf diesem Größenmaßstab auch nicht zwingend
+braucht -- bis man sie braucht, nämlich genau an der Kontextgrenze (nächster Punkt).
+
+=== Kopplung zwischen den Kontexten
+
+[.underline]#Design# -- **der deutlichste Unterschied.**
+
+[mermaid]
+....
+flowchart LR
+  subgraph d1["dojo1"]
+    d_au["au.application<br/>Handler"] --> d_port["au.application.port<br/>LeistungsanspruchPruefungPort"]
+    d_ad["au.infrastructure<br/>LeistungsanspruchPruefungAdapter"] -.implements.-> d_port
+    d_ad --> d_ansp["anspruch.application.port<br/>PruefeLeistungsanspruchUseCase"]
+  end
+  subgraph s1["solution1"]
+    s_au["au.domain<br/>AUService"] -->|new| s_ansp["anspruch.domain<br/>AnspruchService"]
+  end
+....
+
+In `dojo1` kennt `au` nur ein Interface, das `au` selbst besitzt. Ändert sich die Signatur in
+`anspruch`, ist genau eine Klasse betroffen: der Adapter. Genau die Frage, die `doc/README.md` als
+Zweck des Dojos nennt ("welche Pakete mussten für welche Anforderungsänderung angepasst werden").
+
+In `solution1` instanziiert `au.domain.AUService` direkt `anspruch.domain.AnspruchService` --
+Domäne zu Domäne, ohne jede Abstraktion. Zusätzlich: `solution1` hat kein `shared`-Package, also
+importiert `au.domain` auch noch `anspruch.domain.Svnr`. Ein fachlicher Kernbegriff des einen
+Kontexts wird zum Datentyp im anderen.
+
+=== Verdrahtung und Testbarkeit
+
+[.underline]#Design#
+
+Der Kern ist nicht "statische Factory ist böse", sondern die Richtung der Kontrolle:
+
+* `dojo1`: Klassen **bekommen** ihre Abhängigkeiten (Constructor Injection). Der Aufrufer
+  entscheidet, was hineingeht. Ein Test kann pro Instanz etwas anderes einsetzen.
+* `solution1`: Klassen **holen** sich ihre Abhängigkeiten (`DomainPortFactory.getX()` im
+  Feldinitialisierer). Austauschen geht nur über globalen Zustand.
+
+Die Kosten sind im Test messbar: `AnspruchServiceTest` muss ein statisches Singleton per
+`@BeforeEach` setzen und per `@AfterEach` zurücksetzen. Das ist reihenfolgeabhängig und nicht
+parallelisierbar -- bei drei Testklassen egal, bei dreihundert nicht.
+
+Die Ironie ist allerdings festzuhalten: **`dojo1` hat die Naht gebaut und die Tests leer gelassen;
+`solution1` hatte die Naht nicht und hat trotzdem echte Tests geschrieben.** Von `dojo1`s 19
+grünen Tests haben neun einen komplett leeren Rumpf (nur `// given / // when / // then`) und zwei
+weitere gar keine Assertion; fünf Testklassen bestehen ausschließlich aus Kommentaren
+(`AuRESTControllerTest`, `ErstelleAuMeldungCommandHandlerTest`, `ErstelleAuMeldungCommandTest`,
+`AuMeldungTest`, `JpaAuMeldungRepositoryTest`). Substanziell geprüft werden 8 Fälle
+(`AVersicherungszeitTest` 6, `SvnrTest` 1, `VersicherterTest` 1).
+
+Besonders unglücklich ist die Verteilung: Der einzige Integrationstest mit echten Assertions
+(`PruefeLeistungsanspruchUseCaseSIT`, 3 Fälle) wird von Surefire **nicht** ausgeführt, während der
+Integrationstest, der ausgeführt wird (`ErstelleAuMeldungUseCaseTest`), gar keine Assertion
+enthält. Der grüne Build sagt für die Kernfachlichkeit damit nichts aus.
+
+`solution1` hat 9 Tests, davon 8 mit Assertion -- inklusive eines Zukunftstests, der Iteration 7
+belegt.
+
+=== Domänenmodellierung
+
+[.underline]#Design#
+
+[cols="1,2,2",options="header"]
+|===
+| | `dojo1` | `solution1`
+
+| Zentrale Abstraktion
+| Aggregat `Versicherter` mit Zeiten und Eltern
+| Strategie `Anspruch` mit Implementierungen je Regel
+
+| Neue Anspruchsart hinzufügen
+| Methode in `Versicherter` ergänzen -- die Klasse wächst
+| neue `Anspruch`-Implementierung -- Open/Closed
+
+| Fachbegriffe im Code
+| `Versicherter`, `AVersicherungszeit`
+| `EigenAnspruch`, `KindAnspruch`, `ZeitenStrecke`
+
+| Wertobjekt `Svnr`
+| `record`, Prüfsummenvalidierung im Konstruktor, in `shared.domain`
+| `class`, keine Validierung, **kein `equals`/`hashCode`**
+|===
+
+Bei den Anspruchsarten ist `solution1` klar überlegen: Die Geschäftsregeln haben Namen und sind
+einzeln testbar (`AnspruchServiceTest.testEigenAnspruch` / `testKindAnspruch`). `dojo1` versteckt
+dieselbe Logik in privaten Methoden von `Versicherter`, die von außen nur über `isVersichert`
+erreichbar sind.
+
+Beim Wertobjekt ist es umgekehrt und deutlicher: `dojo1`s `Svnr` validiert die Prüfsumme und
+scheitert früh (`new Svnr("1234567890")` wirft). `solution1`s `Svnr` ist ein reiner
+String-Wrapper ohne Validierung; da es zudem eine Klasse ohne `equals`/`hashCode` ist, würde jedes
+`Set<Svnr>` oder `Map<Svnr,…>` stillschweigend falsch arbeiten. Aktuell wird `Svnr` nirgends so
+verwendet -- es ist ein latenter Defekt, kein akuter.
+
+=== Fehlersignalisierung
+
+[.underline]#Design#
+
+`solution1`s `AUService` wirft bei fehlendem Anspruch `KeinAnspruchException`. Der Aufrufer erfährt
+also, dass nicht gespeichert wurde -- und Nebenszenario 1 (Fehler in eine Error-Queue) hätte einen
+Anknüpfungspunkt.
+
+`dojo1`s `ErstelleAuMeldungCommandHandler` ist `void` und loggt nur. Der Aufrufer kann
+"gespeichert" und "abgelehnt" nicht unterscheiden -- Nebenszenario 1 wäre nicht implementierbar,
+ohne die Signatur zu ändern. Dafür hat `dojo1` als einziger überhaupt einen Persistenz-Port
+(`AuMeldungRepository`), hinter dem eine echte Datenbank landen könnte.
+
+Keine der beiden Lösungen implementiert die Error-Queue.
+
+[[iteration67]]
+== Iterationen 6 und 7
+
+[.underline]#Scope#
+
+=== Iteration 7 -- Tagesdatum vorgebbar
+
+`solution1` hat einen Port `SystemDaten` mit `today()`, dazu einen Adapter mit überschreibbarem
+Wert. Der Test `testZukunftAnspruch` setzt 2030 und prüft, dass Angie dann keinen Kindanspruch
+mehr hat. Die Vorgabe ist erfüllt.
+
+Kritik trotz Erfüllung: `setToday()` und `resetToday()` stehen **im Port-Interface**. Ein reines
+Testbelang steht damit in der Produktions-API -- jeder Adapter, auch ein produktiver, muss die
+Methoden implementieren, und jeder Produktionscode kann das Systemdatum verstellen. Sauberer wäre
+ein Port mit nur `today()` und ein separater `FixedClock`-Adapter für Tests.
+
+Wie gut wäre `dojo1` vorbereitet gewesen? Halb. `Versicherter.isVersichert(LocalDate)` nimmt bereits
+einen Stichtag entgegen -- das ist die richtige Vorarbeit. Aber `isUnter18()` ruft intern
+`LocalDate.now()` auf, und `PruefeLeistungsanspruchQueryHandler` ebenfalls. Iteration 7 würde in
+`dojo1` also `domain` **und** `application` anfassen und einen neuen Port brauchen.
+
+Nebenbefund in `dojo1`: In `isVersichert(date)` werden die Versicherungszeiten gegen `date`, das
+Alter aber gegen `LocalDate.now()` geprüft -- zwei verschiedene Stichtage in einer Methode. Bei
+`date == now` (dem einzigen aktuellen Aufruf) fällt das nicht auf. Der Commit `1369d83`
+("misverstandene iteration 2: ist der versicherte _heute_ versichert?") zeigt, dass die
+Stichtagsfrage in diesem Branch schon einmal Reibung erzeugt hat.
+
+=== Iteration 6 -- Regelwerk aus der Datenbank
+
+Hier ist Vorsicht bei der Bewertung geboten: `solution1` hat den Port `AnspruchRegeln`, aber
+`AnspruchRegelnImpl.getAltersgrenzeKind()` gibt hartcodiert `18` zurück. **Beide Lösungen enden
+bei einer literalen 18** -- der Unterschied ist ausschließlich, ob sie hinter einer austauschbaren
+Naht liegt. Die von der Vorgabe verlangte Datenbank existiert in keiner der beiden Lösungen.
+
+In `dojo1` steckt die 18 in `Versicherter.isUnter18()`, also mitten in der Domäne. Iteration 6
+würde dort einen neuen Port plus Adapter erfordern und `Versicherter` verändern.
+
+[[variante]]
+== Welche Ports-&-Adapters-Variante wird jeweils umgesetzt?
+
+Grundlage dieses Kapitels ist der _Ports & Adapters Architecture Variants -- Reference Guide_ mit
+den drei Varianten Hexagonal (Cockburn), Onion (Palermo) und Clean Architecture (Uncle Bob /
+Eschhold-Adaption). Paragraphenverweise (§) beziehen sich auf dieses Referenzdokument.
+
+Datengrundlage sind die vollständigen `import`-Listen beider `src/main`-Bäume, erhoben per
+`git show` je Branch. Es wird also nicht nach Paketnamen geraten, sondern nach tatsächlichen
+Compile-Time-Abhängigkeiten klassifiziert.
+
+=== Diagnosefrage nach §0
+
+> _Wo werden Port-Interfaces deklariert, und hängt die Domäne selbst von einem Port ab?_
+
+[cols="2,3,3",options="header"]
+|===
+| Kriterium | `dojo1` | `solution1`
+
+| Wo liegen die Ports?
+| `…anspruch.application.port`, `…au.application.port` -- **außerhalb** von `domain`, eine Schale
+  weiter draußen
+| `anspruch.ports` -- **außerhalb** von `domain`, als Geschwister-Package
+
+| Importiert eine Domänenklasse einen Port?
+| **Nein.** `Versicherter`, `AVersicherungszeit`, `AuMeldung`, `Svnr` importieren ausschließlich
+  `shared.domain` und `java.*`
+| **Ja.** `EigenAnspruch` importiert `ports.ZeitenService`, `KindAnspruch` importiert
+  `ports.AnspruchRegeln`, `ports.PersonenDatenService`, `ports.SystemDaten`
+
+| Wer implementiert den Input Port?
+| `PruefeLeistungsanspruchQueryHandler` / `ErstelleAuMeldungCommandHandler` -- also eine dedizierte
+  Interactor-Rolle
+| Es gibt **keinen** Input Port
+
+| **Ergebnis**
+| **Clean Architecture (Eschhold)**
+| **Hexagonal Architecture (Cockburn)**
+|===
+
+=== `dojo1` = Clean Architecture (Eschhold-Adaption)
+
+Die beiden anderen Varianten scheiden aus bzw. sind der schwächere Treffer:
+
+* **Onion scheidet aus (§2.3):** In `anspruch.domain`, `au.domain` und `shared.domain` liegt kein
+  einziges Port-Interface. Die Domäne besitzt die Abstraktion hier gerade *nicht*.
+* **Hexagonal trifft ebenfalls zu, ist aber unspezifischer.** `dojo1` erfüllt jede Regel aus §1.5 --
+  was es muss, denn Clean-konform ist eine Teilmenge von Hexagonal-konform. Auf Clean festgelegt
+  wird es durch die zwei Merkmale, die Hexagonal nicht verlangt: Ports **eine Schale außerhalb**
+  der Domäne (§3.2) und eine dedizierte **Interactor**-Rolle, die den Input Port implementiert und
+  die Output Ports ruft (§3.1). Für die Leak-Analyse wird deshalb der strengere Regelsatz §3.11
+  angelegt.
+
+Alle drei Merkmale aus §0 und §3.2 treffen zu: reine Domäne ohne jede Port-Kenntnis, Ports eine
+Schale außerhalb der Domäne, ein Interactor, der den Input Port implementiert und die Output Ports
+aufruft. Die Abweichungen sind rein **sprachlich**, nicht strukturell -- und sie entsprechen der
+Hombergs-Spalte aus §3.5:
+
+[cols="2,2,2",options="header"]
+|===
+| Rolle nach §3.1/§3.4 | Kanonischer Name (Eschhold) | Umsetzung in `dojo1`
+
+| Domain Ring | `domain.model` | `anspruch.domain`, `au.domain`, `shared.domain`
+| Input Port | `usecase.in` | `application.port.…UseCase`
+| Output Port | `usecase.out` | `application.port.…Repository` / `…Port`
+| Interactor | `usecase.interactor` | `application.…QueryHandler` / `…CommandHandler`
+| Input Adapter | `adapter.in` | `api`
+| Output Adapter | `adapter.out` | `infrastructure`
+|===
+
+Ein Unterschied ist für die Prüfbarkeit relevant: `dojo1` legt Input- und Output-Ports in **ein**
+Package `application.port`, während §3.4 sie in `usecase.in` und `usecase.out` trennt. Die
+ArchUnit-Regeln aus §5.1 lassen sich deshalb nicht unverändert anwenden -- man kann nicht per
+Package-Pattern unterscheiden, ob ein Adapter einen Input- oder einen Output-Port berührt.
+
+==== Leaks in `dojo1` (gemessen an der Checkliste §3.11)
+
+[cols="1,3,1",options="header"]
+|===
+| Regel | Befund | Schwere
+
+| §3.3 -- _Die Domäne wird nur aufgerufen, sie ruft nie nach außen_
+| **`Versicherter.isUnter18()` ruft `LocalDate.now()`.** Die Systemuhr ist eine
+  Infrastrukturressource; die Domäne holt sie sich selbst, statt sie gereicht zu bekommen. Besonders
+  instruktiv ist der Kontrast **innerhalb derselben Klasse**: `isVersichert(LocalDate)` bekommt
+  den Stichtag als Parameter -- also genau das Decide-then-Act-Muster aus §3.8 -- während
+  `isUnter18()` zwei Zeilen weiter selbst nach der Uhr greift. Ein Muster, zwei Anwendungen, eine
+  davon richtig.
+| hoch
+
+| §3.3 / §3.11 -- _Geschäftsregel-`if` gehört in die Domäne, nicht in den Interactor_
+| **`ErstelleAuMeldungCommandHandler` entscheidet selbst.** Die Regel aus
+  `doc/UseCase_AU_ElektronischeKrankmeldung.md` ("Nur wenn eine Person einen aktiven Anspruch hat,
+  ist die AU-Meldung gültig") steht als `if (!hatAnspruch) … else speichereAuMeldung(…)` im
+  Interactor. Der Interactor soll orchestrieren und Ports rufen, nicht Fachregeln entscheiden.
+  Kanonisch wäre eine Domänenoperation wie `AuMeldung.istGueltig(anspruch)` oder ein Domain
+  Service.
+| hoch
+
+| §3.4 -- _`domain.model` darf nur sich selbst sehen_
+| **`shared.domain.Svnr` importiert `at.gepardec.dojo.svnr.SvnrValidator`** aus dem Fremdmodul
+  `dojo-external-domains`. Nach dem Buchstaben der Tabelle ein Verstoß. In `CLAUDE.md` ist diese
+  eine Klasse bewusst als "Utility, kein Umsystem" freigegeben -- eine andere Brille, keine
+  Rücknahme des Befunds. Ein Renderer/Validator in der Domäne ist vertretbar, aber es ist eine
+  dokumentierte Ausnahme, keine Konformität.
+| mittel
+
+| §3.4 -- _`adapter.in` darf nur `usecase.in` + `domain.model` sehen_
+| **`au.api.AuRESTController` importiert `anspruch.api.Response`** -- ein Input Adapter greift auf
+  den Input Adapter eines fremden Kontexts zu. Der Import ist ungenutzt und in einer Zeile
+  entfernbar, aber ArchUnit würde ihn melden.
+| gering
+
+| §3.11 -- _keine unabstrahierte Infrastruktur im Use-Case-Ring_
+| **`PruefeLeistungsanspruchQueryHandler` ruft `LocalDate.now()`.** Nach dem Buchstaben von §3.4
+  zulässig (`usecase.interactor` darf `java..` sehen), aber es ist derselbe fehlende Clock-Port
+  wie oben und der Grund, warum Iteration 7 in `dojo1` zwei Ringe anfassen müsste (siehe
+  <<iteration67>>).
+| mittel
+|===
+
+**Kein Leak, obwohl ArchUnit es melden würde:**
+`au.infrastructure.LeistungsanspruchPruefungAdapter` importiert
+`anspruch.application.port.PruefeLeistungsanspruchUseCase` -- ein `adapter.out`, der einen fremden
+`usecase.in` berührt. Nach dem Buchstaben von §3.4 unzulässig. Die Tabelle ist aber für **einen**
+Bounded Context formuliert; `dojo1` hat zwei, und der kontextübergreifende Zugriff ist in ihr
+schlicht nicht vorgesehen. Genau dieser Adapter ist der Anti-Corruption Layer, den man an einer
+Kontextgrenze bauen will. **Falsch-positiv bei wörtlicher Anwendung der Tabelle** -- nicht als
+Defekt melden.
+
+Ebenfalls kein Leak: Entities ohne CDI-Injection (§3.6) und passive Domain Events (§3.7) sind
+trivial erfüllt -- das Projekt verwendet weder CDI noch Domain Events.
+
+=== `solution1` = Hexagonal Architecture (Cockburn)
+
+Die beiden strengeren Varianten scheiden nach ihren **eigenen** Definitionskriterien aus:
+
+* **Onion scheidet aus (§2.3):** Onion verlangt, dass die Interfaces *innerhalb des Domain-Model-
+  Rings* deklariert sind. `anspruch.ports` liegt nicht in `anspruch.domain`, sondern daneben.
+  §0 formuliert dasselbe Kriterium ("declared as part of the domain package").
+* **Clean scheidet aus (§3.2):** Clean verlangt, dass der Domain Ring **null** Kenntnis von Ports
+  hat. `EigenAnspruch` und `KindAnspruch` importieren vier Port-Interfaces.
+
+Was übrig bleibt, passt: §4 erlaubt Hexagonal Ports "anywhere in the application core", und auf die
+Frage "Can Domain call a port directly?" antwortet die Hexagonal-Spalte "Not formally forbidden".
+§1.5 sagt sogar ausdrücklich, man solle eine Hexagonal-Codebasis **nicht** dafür bemängeln, dass
+die Ports neben den Domänenklassen liegen. Das ist also eine Einordnung, kein Kompromiss.
+
+Die Zuordnung im Detail: `domain` und `uc` bilden zusammen den **Application Core**, `ports` sind
+die Ports, `adapters` die Driven Adapters. Ein Driving Adapter existiert nicht -- die Tests
+übernehmen diese Rolle, was §1.1 ("driven by users, programs, **automated tests**, or batch
+scripts") ausdrücklich vorsieht.
+
+==== Leaks in `solution1` (gemessen an §1.2 und der Checkliste §1.5)
+
+Hexagonal ist die permissivste der drei Varianten -- sie stellt im Wesentlichen zwei harte Regeln
+auf. **Beide sind verletzt.**
+
+[cols="1,3,1",options="header"]
+|===
+| Regel | Befund | Schwere
+
+| §1.2 -- _"adapters depend on ports, **never the reverse**"_
+| **`ports.DomainPortFactory` importiert `adapters.AnspruchRegelnImpl`,
+  `adapters.PersonenDatenServiceImpl`, `adapters.SystemDatenImpl`, `adapters.ZeitenServiceImpl`.**
+  Der Pfeil läuft von der Portschicht in die Adapterschicht -- exakt die Richtung, die die einzige
+  explizite Dependency-Regel von Cockburn verbietet. Damit ist auch §1.2s Kernsatz "the
+  application core must not depend on any adapter" transitiv gebrochen: der Compile-Time-Pfad
+  `domain → ports → adapters` verbindet den innersten mit dem äußersten Ring.
+| **hoch**
+
+| §1.5 -- _"Driving adapters depend on input ports, never directly on service implementation
+  classes"_
+| **Es gibt keinen einzigen Input Port.** Driving Adapter sind hier die Tests -- §1.1 zählt
+  "automated tests" ausdrücklich dazu, und einen anderen Treiber hat das Projekt nicht.
+  `WebCheckUseCaseTest` instanziiert `new AnspruchWebCheck()`, `AUServiceTest`
+  `new AUService()`, `AnspruchServiceTest` sogar `new AnspruchService()`, `new EigenAnspruch()`
+  und `new KindAnspruch()` -- durchweg konkrete Core-Klassen, weil es kein Interface gibt, an dem
+  sie hängen könnten. Die getriebene Seite ist sauber abstrahiert (vier Ports), die treibende gar
+  nicht. §1.2 nennt genau diese Symmetrie -- "both are just adapters plugged into just ports" --
+  als Kern des Musters.
+| **hoch**
+
+| §1.5 -- _"Every interaction with the outside world happens through a port interface"_
+| **Der Kontext `au` hat überhaupt keinen Port.** Schritt 3 des Hauptszenarios ("Die
+  Sozialversicherung speichert die Daten in der Datenbank") ist in `AUService` ein
+  `log.info(…)`. Es gibt keinen Persistenz-Port, hinter den je eine Datenbank treten könnte.
+| **hoch**
+
+| §1.2 -- _Kern unabhängig von Technologie_
+| **Der Service-Locator hebelt die Austauschbarkeit aus.** Selbst wenn man
+  `DomainPortFactory` als legitimes Wiring ansieht: Domänenklassen holen ihre Ports im
+  Feldinitialisierer aus einer statischen Factory. Der von §1.2 genannte Kernnutzen ("swap a real
+  DB adapter for an in-memory fake behind the same port") funktioniert damit nur über globalen
+  Zustand, nicht pro Instanz.
+| mittel
+
+| §1.5 -- _Kern importiert keine Adapter/Framework-Pakete_
+| Formal erfüllt: keine Domänenklasse importiert `adapters.*` oder ein Umsystem direkt. Der
+  Verstoß läuft ausschließlich über die Factory (Zeile 1 dieser Tabelle).
+| --
+
+| (keine Variantenregel)
+| **`au.domain.AUService` ist ein Application Service in einem `domain`-Package** und
+  instanziiert den Core eines fremden Kontexts. Unter Hexagonal ist Core-ruft-Core nicht verboten,
+  aber der Paketname sagt etwas anderes als die Klasse tut, und die Grenze Core/Adapter wird
+  unlesbar.
+| gering
+
+| (keine Variantenregel)
+| **`SystemDaten.setToday()`/`resetToday()` stehen im Produktionsport.** Ein Testbelang im
+  Vertrag: jeder produktive Adapter muss die Methoden implementieren, jeder Produktionscode kann
+  das Systemdatum verstellen.
+| gering
+|===
+
+==== Was `solution1` zur nächststrengeren Variante machen würde
+
+`solution1` ist **nahe an Onion** -- die Distanz sind zwei mechanische Schritte:
+
+. `DomainPortFactory` aus `ports` herausnehmen (in eine Composition Root oder in den Testbereich).
+  Damit verschwindet der Verstoß gegen §1.2, und die Dependency-Regel von Onion (§2.1, nur nach
+  innen) wäre erfüllt.
+. Das Package `ports` nach `domain.ports` verschieben. Damit ist §2.3 erfüllt -- Interfaces im
+  Domain-Model-Ring -- und `EigenAnspruch`/`KindAnspruch` sind das, was Onion ausdrücklich erlaubt
+  (§2.6: "Domain Services may depend on domain-declared port interfaces directly").
+
+Nach Clean (Eschhold) wäre der Weg deutlich weiter: die Port-Nutzung müsste ganz aus den
+Domänenklassen verschwinden, über Decide-then-Act (§3.8) oder über einen Interactor, der die
+Zeiten lädt und der Domäne übergibt.
+
+=== Gegenüberstellung der Verstöße
+
+[mermaid]
+....
+flowchart LR
+  subgraph D1["dojo1 -- Clean (Eschhold)"]
+    d_ad["adapter.in / adapter.out"] --> d_uc["usecase ports"]
+    d_uc --> d_dom["domain"]
+    d_int["interactor"] --> d_uc
+    d_int --> d_dom
+    d_dom -.->|"LEAK: LocalDate.now"| d_clock(["Systemuhr"])
+    d_int -.->|"LEAK: Geschaeftsregel-if"| d_rule(["AU nur bei Anspruch"])
+  end
+  subgraph S1["solution1 -- Hexagonal (Cockburn)"]
+    s_ad["adapters"] --> s_ports["ports"]
+    s_dom["domain"] --> s_ports
+    s_uc["uc"] --> s_dom
+    s_ports -.->|"LEAK: Port haengt an Adapter"| s_ad
+    s_uc -.->|"LEAK: kein Input Port"| s_dom
+  end
+....
+
+[cols="2,2,2",options="header"]
+|===
+| | `dojo1` (Clean/Eschhold) | `solution1` (Hexagonal/Cockburn)
+
+| Variante erkannt an
+| reine Domäne + Ports eine Schale außen + Interactor
+| Ports neben der Domäne, Domäne nutzt Ports direkt
+
+| Verstöße gegen **harte** Regeln der eigenen Variante
+| 2 (Domäne ruft Systemuhr; Geschäftsregel im Interactor)
+| 3 (Port hängt an Adapter; kein Input Port; Außenwelt ohne Port in `au`)
+
+| Verstöße nach Buchstaben, sachlich vertretbar
+| 2 (`Svnr → SvnrValidator`; fremder `Response`-Import)
+| --
+
+| Verstöße nach Geist, nicht nach Buchstaben
+| 1 (`LocalDate.now()` im Interactor -- §3.4 erlaubt `java..`, aber es ist derselbe fehlende
+  Clock-Port wie in der Domäne, nur einen Ring weiter außen)
+| --
+
+| Falsch-Positive bei wörtlicher Regelanwendung
+| 1 (Kontext-Adapter = gewollter ACL)
+| --
+
+| Strukturelle Distanz zur nächststrengeren Variante
+| bereits die strengste Variante
+| 2 mechanische Schritte bis Onion
+|===
+
+=== Einordnung zum Hauptbefund
+
+Diese Variantenanalyse **bestätigt** den Hauptbefund aus dem Fazit und stellt ihn nicht in Frage.
+Die Zählung "2 gegen 3" ist dabei nicht der Punkt, denn die Varianten unterscheiden sich in ihrer
+Strenge:
+
+* `dojo1` verstößt gegen Regeln der **strengsten** Variante. Beide harten Befunde -- Systemuhr in
+  der Domäne, Geschäftsregel im Interactor -- wären unter Hexagonal (Cockburn) überhaupt keine
+  Verstöße, und der `if` im Interactor wäre auch unter Onion nur ein Stilbefund.
+* `solution1` verstößt gegen die zwei Regeln, die die **permissivste** Variante überhaupt
+  aufstellt. `ports → adapters` ist unter jeder der drei Varianten falsch.
+
+Anders gesagt: `dojo1` scheitert an einer hohen Latte, `solution1` an einer niedrigen. Genau das
+meint "die Gruppenlösung ist an den Portregeln strenger als die Referenzlösung".
+
+Für ein Dojo ist die produktivste Frage daraus nicht "wer hat gewonnen", sondern: **beide Gruppen
+haben implizit eine Variante gewählt, ohne sie zu benennen.** Eine Zeile in `doc/README.md`
+("Zielvariante: Clean Architecture nach Eschhold") plus die passende ArchUnit-Regelmenge aus §5.1
+bzw. §5.2 hätte jeden der oben gelisteten Befunde beim ersten Build sichtbar gemacht. Beide
+Projekte enthalten derzeit keine ArchUnit-Abhängigkeit; die Regelsätze aus §5 des
+Referenzdokuments sind direkt übernehmbar, für `dojo1` allerdings erst nach Auftrennung von
+`application.port` in `…port.in` und `…port.out`.
+
+Welche Variante für diese Fachlichkeit die richtige Wahl *gewesen wäre* -- eine andere Frage als
+die hier beantwortete -- steht in <<zielvariante>>.
+
+== Positive Befunde
+
+=== `dojo1`
+
+* [.underline]#Design# **Konsequente Portrichtung.** Nur `infrastructure` sieht die Umsysteme;
+  kein Package-Zyklus zwischen Ports und Adaptern.
+* [.underline]#Design# **Echter Anti-Corruption Layer zwischen den Kontexten.** Ein eigener Port
+  plus Adapter für `au → anspruch`. Lehrbuchhaft und für den Zweck des Dojos die wertvollste
+  Einzelentscheidung.
+* [.underline]#Design# **Constructor Injection durchgängig**, keine globalen Zustände, kein
+  Service Locator. Jede Klasse ist isoliert instanziierbar.
+* [.underline]#Design# **Kein Durchreichen externer Datentypen.** `VersicherterAdapter` mappt
+  `VersicherungsZeit → AVersicherungszeit` und `Person → LocalDate`. Die Domäne kennt die
+  Umsystem-Records nicht.
+* [.underline]#Design# **`Svnr` als validierendes Wertobjekt** in einem eigenen `shared`-Package.
+* [.underline]#Design# **Persistenz ist abstrahiert** (`AuMeldungRepository`).
+* [.underline]#Design# **Package-Wurzel `…dojo.leistung.…`** bildet die in den Dokumenten
+  genannte "Applikation Leistung" ab.
+* Prozess: Der in `doc/README.md` für die Implementierer-Gruppen vorgeschriebene Ablauf wurde
+  eingehalten -- Doku und Code pro Iteration gemeinsam committet, die Iterationsabschnitte stehen
+  in `doc/UseCase_*.md`. Damit ist pro Anforderungsänderung nachvollziehbar, welche Pakete
+  angefasst wurden -- genau der Zweck des Dojos.
+
+=== `solution1`
+
+* [.underline]#Design# **Strategie-Muster für Anspruchsarten.** Geschäftsregeln sind eigene,
+  benannte, einzeln testbare Klassen. Neue Regeln sind additiv (Open/Closed).
+* [.underline]#Design# **Fachsprache im Code.** `EigenAnspruch` steht wörtlich so in
+  `doc/GeschäftsRegeln_Anspruch.md`.
+* [.underline]#Design# **Tests mit echten Assertions**, inklusive Negativfälle mit Begründungstext
+  ("Eberhard ist zu alt", "Maria ist kein Kind"). Auch `EigenAnspruch` und `KindAnspruch` werden
+  einzeln geprüft, nicht nur die Fassade.
+* [.underline]#Design# **Korrekte Elternprüfung.** `KindAnspruch` prüft beim Elternteil gezielt
+  `EigenAnspruch` -- exakt die Formulierung der Geschäftsregel.
+* [.underline]#Design# **Fehlerfall ist signalisiert** (`KeinAnspruchException`) statt nur
+  geloggt.
+* [.underline]#Design# **Deutlich weniger Zeremonie:** 301 statt 357 Zeilen bei gleichem
+  Funktionsumfang, ohne dass die Lesbarkeit leidet.
+* [.underline]#Scope# **Iterationen 6 und 7 umgesetzt** (Regelwerk als Naht, Tagesdatum vorgebbar).
+
+== Negative Befunde
+
+=== `dojo1`
+
+* [.underline]#Design# **Die Tests sind größtenteils Attrappen.** 11 Testdateien, 355 Zeilen,
+  19 grüne Tests -- aber neun leere Rümpfe, zwei ohne Assertion und fünf reine
+  Kommentarklassen. Ein grüner Build sagt hier fast nichts aus. Das ist der schwerwiegendste
+  Befund gegen `dojo1`, weil die gute Struktur ohne Tests nicht abgesichert ist.
+* [.underline]#Design# **`PruefeLeistungsanspruchUseCaseSIT` läuft bei `mvn test` gar nicht.**
+  Kein Failsafe-Plugin, Surefire matcht `*SIT` nicht. Damit ist die einzige durchgängige
+  Abdeckung der Fälle Kurt/Angie/Eberhard standardmäßig inaktiv. Manuell:
+  `mvn -pl dojo-leistung test -Dtest=PruefeLeistungsanspruchUseCaseSIT` (verifiziert; ohne `-pl`
+  scheitert der Reaktor).
+* [.underline]#Design# **Elternprüfung weicht von der Geschäftsregel ab.**
+  `isMitElternMitversichert` ruft beim Elternteil `isVersichert` (also inklusive Kindanspruch)
+  statt nur den Eigenanspruch. Aktuell folgenlos, weil `VersicherterAdapter.leseVersicherter` die
+  `eltern`-Liste des Elternteils nie befüllt -- es kollabiert faktisch auf `isEigenversichert`.
+  **Strukturelles Risiko, kein aktueller Defekt.**
+* [.underline]#Design# **Zwei Stichtage in einer Methode** (`isVersichert(date)` vs.
+  `isUnter18()` mit `LocalDate.now()`). Derselbe Sachverhalt taucht in diesem Dokument dreimal
+  auf, aus drei Blickwinkeln: als Stichtags-Inkonsistenz hier, als fehlende Vorbereitung auf
+  Iteration 7 (<<iteration67>>) und als Bruch der Domänenreinheit nach §3.3 (<<variante>>). Es ist
+  ein Befund, nicht drei.
+* [.underline]#Design# **Toter Code:** `if (versicherter == null) return false;` im QueryHandler --
+  `VersicherterAdapter.findBySvnr` gibt nie `null` zurück.
+* [.underline]#Design# **Verirrter Import:** `au/api/AuRESTController` importiert ungenutzt
+  `anspruch.api.Response` -- genau der kontextübergreifende Typzugriff, den die Lösung sonst
+  vermeidet.
+* [.underline]#Design# **Kein Ergebnis aus dem AU-UseCase** (`void` + Log), Nebenszenario 1 nicht
+  anschlussfähig.
+* [.underline]#Design# Mockito wird in Testkommentaren vorausgesetzt, ist aber nicht als
+  Dependency eingebunden.
+* [.underline]#Scope# Iterationen 6 und 7 fehlen.
+
+=== `solution1`
+
+* [.underline]#Design# **Der Kontext `au` hat kein Hexagon.** Nur `domain`, kein Port, kein
+  Adapter, keine Persistenz -- `AUService` loggt statt zu speichern. Für die Fragestellung des
+  Dojos ist das die größte Lücke.
+* [.underline]#Design# **`ports` importiert `adapters`.** `DomainPortFactory` liegt in `ports` und
+  zieht alle vier Implementierungen herein. Die Portschicht ist damit nicht mehr unabhängig von
+  den Adaptern kompilierbar -- der zentrale Nutzen der Trennung ist aufgehoben. Die Factory gehört
+  in eine eigene Composition-Root-Schicht. Dies ist der schwerste Einzelbefund des gesamten
+  Vergleichs: Er verstößt gegen die einzige explizite Dependency-Regel der **permissivsten** der
+  drei Varianten (<<variante>>).
+* [.underline]#Design# **Service Locator statt Injection.** Domänenklassen holen ihre Ports im
+  Feldinitialisierer aus einer statischen Factory. Folge: `AnspruchServiceTest` manipuliert
+  globalen Zustand, ist reihenfolgeabhängig und nicht parallelisierbar.
+* [.underline]#Design# **Direkte Kontextkopplung** `au.domain → anspruch.domain` per `new`, plus
+  Nutzung von `anspruch.domain.Svnr` in `au` mangels `shared`-Package.
+* [.underline]#Design# **`Svnr` ohne Validierung und ohne `equals`/`hashCode`** (siehe oben).
+* [.underline]#Design# **Testbelange im Produktionsport:** `SystemDaten.setToday/resetToday`.
+* [.underline]#Design# **Adapter erzeugen ihre Umsystem-Clients selbst**
+  (`private PersonenService personenService = new PersonenService();`) -- auch der Adapter ist
+  nicht von außen konfigurierbar.
+* [.underline]#Design# **Namenskollision:** `anspruch.ports.ZeitenService` heißt wie
+  `at.gepardec.dojo.zeiten.ZeitenService`, weshalb `ZeitenServiceImpl` den Umsystem-Typ voll
+  qualifizieren muss.
+* [.underline]#Design# **`AUServiceTest` prüft Ausnahmen per `try/catch`-Flag** statt
+  `assertThrows`; `testKurtMeldungWirdGespeichert` enthält gar keine Assertion.
+* [.underline]#Design# Ungenutzter Import `java.util.Arrays` in `ports.ZeitenService`.
+* [.underline]#Design# Iteration 6 ist nur zur Hälfte erfüllt: Naht ja, Datenbank nein.
+
+Ausdrücklich **nicht** als Mangel gewertet: Auf `feature/solution1` fehlen die Iterationsabschnitte
+in `doc/` -- die Iterationen sind nur an den Commit-Nachrichten erkennbar. Der in `doc/README.md`
+beschriebene Ablauf richtet sich an die Implementierer-Gruppen; als Referenzlösung des Sensei hält
+dieser Branch die Basis-Dokumente bewusst unverändert.
+
+== Verifizierte Defekte
+
+Die folgenden Punkte wurden durch temporäre Probe-Tests am laufenden Code belegt, nicht nur aus
+dem Quelltext geschlossen.
+
+[cols="1,2,2",options="header"]
+|===
+| Defekt | Betroffen | Nachweis
+
+| **Off-by-one bei der Altersgrenze**
+| `solution1`
+| `KindAnspruch` prüft `alter > 18`. Bei Stichtag 05.08.2028 ist Angie (geb. 24.07.2010) genau 18
+  und erhält weiterhin Kindanspruch. Probe-Ausgabe:
+  `PROBE_18JAEHRIG_HAT_KINDANSPRUCH=true`. Die Regel lautet "Kinder **unter** 18".
+
+| **NullPointerException bei unbekannter SVNR**
+| **beide**
+| `PersonenService.getPerson` gibt für unbekannte SVNR `null` zurück. +
+  `solution1`: `PersonenDatenServiceImpl` dereferenziert direkt -- `PROBE_UNBEKANNT_EXCEPTION=java.lang.NullPointerException`. +
+  `dojo1`: `VersicherterAdapter` fängt das `null` ab, reicht aber `geburtsdatum = null` an
+  `Versicherter` weiter; `isUnter18()` wirft dann -- `PROBE_UNBEKANNT_EXCEPTION=java.lang.NullPointerException`. +
+  Symmetrischer Befund, kein Argument für eine der beiden Seiten.
+|===
+
+Zum Off-by-one noch eine Einordnung, die bewusst **nicht** in der Tabelle steht: `dojo1` ist an
+dieser Stelle nach Quelltext korrekt -- `geburtsdatum.plusYears(18).isAfter(now)` ist am
+18. Geburtstag bereits `false`, also genau "unter 18". Messen lässt sich das aber nicht, weil
+`dojo1` mangels vorgebbarem Tagesdatum (Iteration 7) keinen Stichtag in der Zukunft zulässt. Der
+Befund ist damit aus dem Code geschlossen, nicht belegt -- und zugleich eine Illustration, wozu
+Iteration 7 gut ist.
+
+== Fazit
+
+Die beiden Lösungen sind ein gutes Beispiel dafür, dass "hexagonal" keine eindeutige Struktur
+vorgibt -- sie setzen tatsächlich **zwei verschiedene Varianten** der Familie um:
+`dojo1` folgt Clean Architecture (Eschhold-Adaption), `solution1` folgt Hexagonal Architecture
+(Cockburn). Die Herleitung samt Regelverstößen steht in <<variante>>.
+
+**Hauptbefund: Die Gruppenlösung ist an den Portregeln strenger als die Referenzlösung.**
+Portrichtung, Anti-Corruption Layer zwischen den Kontexten, Constructor Injection, validierende
+Wertobjekte, abstrahierte Persistenz -- an jedem Punkt, den ein Ports-&-Adapters-Review abfragen
+würde, liefert `dojo1` die erwartete Antwort, `solution1` an zwei entscheidenden Stellen nicht
+(`ports` hängt an `adapters`, der Kontext `au` hat überhaupt kein Hexagon). Das ist für ein Dojo
+kein Makel der Referenzlösung, sondern das brauchbarste Diskussionsmaterial, das dieser Vergleich
+hergibt.
+
+Der Preis von `dojo1` ist Zeremonie (drei Klassen, damit `au` nach dem Anspruch fragen kann) und,
+gravierender, ein Testbestand, der überwiegend aus leeren Rümpfen besteht. Die Struktur ist gut,
+aber unbewiesen.
+
+**`solution1` ist die fachlich ausdrucksstärkere und besser getestete Lösung.** Das
+Strategie-Muster für Anspruchsarten ist die beste Einzelidee im ganzen Vergleich: Geschäftsregeln
+haben Namen, sind einzeln testbar und additiv erweiterbar. Und die Tests prüfen tatsächlich etwas.
+
+Die interessanteste Beobachtung für das Dojo ist die Umkehrung: `dojo1` hat die Naht für
+Testbarkeit gebaut und sie nicht genutzt; `solution1` hatte die Naht nicht und hat trotzdem echte
+Tests geschrieben. Struktur allein erzeugt keine Qualität.
+
+=== Konkrete Empfehlungen
+
+Für `feature/solution1` (Referenzlösung):
+
+. `DomainPortFactory` aus `ports` herausziehen -- in eine eigene Composition-Root-Schicht oder in
+  den Testbereich. Damit verschwindet der Package-Zyklus `ports → adapters`.
+. Den Kontext `au` auf denselben Schnitt bringen wie `anspruch`: mindestens ein Repository-Port
+  für die Meldung und ein Port statt `new AnspruchService()` an der Kontextgrenze.
+. `Svnr` zu einem `record` mit Validierung machen und nach `shared` verschieben, damit `au` nicht
+  mehr auf `anspruch.domain` zugreifen muss.
+. Off-by-one korrigieren (`alter >= altersGrenzeKind`) und `setToday`/`resetToday` aus dem
+  Produktionsport `SystemDaten` entfernen.
+
+Für `feature/dojo1` (Gruppenlösung):
+
+. Die leeren Testrümpfe füllen -- vorrangig `PruefeLeistungsanspruchQueryHandlerTest` und
+  `VersicherterTest`, das sind die Klassen mit der eigentlichen Fachlogik. Mockito als Dependency
+  ergänzen, die Kommentare setzen es bereits voraus.
+. Failsafe-Plugin konfigurieren (oder den SIT umbenennen), damit
+  `PruefeLeistungsanspruchUseCaseSIT` im Build läuft.
+. Iteration 7 vorbereiten: `LocalDate.now()` aus `Versicherter.isUnter18()` und aus dem
+  QueryHandler entfernen, Stichtag durchreichen. Danach ist Iteration 6 nur noch ein Port.
+. Das Strategie-Muster aus `solution1` für die Anspruchsarten übernehmen -- es passt zum
+  vorhandenen Schnitt und macht die Geschäftsregeln einzeln testbar.
+. `ErstelleAuMeldungUseCase` ein Ergebnis liefern lassen, sonst ist Nebenszenario 1 nicht
+  anschlussfähig.
+
+[[zielvariante]]
+== Empfehlung: Welche Variante passt zu dieser Fachlichkeit?
+
+Die vorangegangenen Kapitel stellen fest, *welche* Variante jede Lösung umsetzt (<<variante>>).
+Dieses Kapitel beantwortet die andere Frage: welche der drei Varianten wäre für diesen Use Case
+die richtige Wahl gewesen?
+
+**Empfehlung: Onion Architecture (Palermo).** Nicht als Kompromiss zwischen den beiden
+umgesetzten Varianten, sondern weil die Anforderungen des Dojos auf Onions ausgewiesene Stärke
+zeigen -- der Referenz-Guide nennt in der "Best fit"-Zeile von §4 selbst
+"config-heavy / data-driven domain modules".
+
+=== Drei Treiber aus der Aufgabenstellung
+
+**1. Iteration 6 -- Regelwerk aus der Datenbank.**
+Die Altersgrenze 18 ist kein Konstantenproblem, sondern laut Aufgabenstellung der Anfang eines
+"umfangreichen Regelwerks", das die Fachabteilung pflegt. Damit braucht *Domänenlogik* dauerhaft
+Daten aus einem Umsystem. Genau dieses Szenario benennt §2.6 als Onion-Kriterium: _"Prefer Onion
+over Clean (Eschhold) for modules that are heavily configuration-driven, where domain logic needs
+conditional DB-stored data."_
+
+**2. Iteration 5 -- Mitversicherung.**
+Die Regel entscheidet selbst, *welche* Daten sie als Nächstes braucht: erst das Geburtsdatum,
+dann -- nur falls unter 18 -- die Angehörigenbeziehungen, dann deren Versicherungszeiten. Unter
+Clean muss der Interactor diese Kette vorwegnehmen (Decide-then-Act, §3.8) oder pauschal alles
+laden. `dojo1` wählt Letzteres: `VersicherterAdapter` lädt die Eltern immer mit, auch für Kurt und
+Eberhard, bei denen sie nie gebraucht werden. Für eine Ebene ist das vertretbar; mit Ehepartnern,
+Karenzzeiten oder Großeltern wird es systematisches Over-Fetching.
+
+**3. Der wachsende Regelkatalog -- das stärkste Argument.**
+Ein Anspruchs-Regelwerk wächst monoton: Eigenanspruch, Kinder, Ehepartner, Studenten, Pensionisten,
+Karenz. `solution1` zeigt die passende Antwort darauf -- das Strategie-Muster `Anspruch` mit einer
+Implementierung je Regel. Jede neue Anspruchsart ist dann **eine neue Klasse und eine Zeile** in
+`AnspruchService` (Open/Closed).
+
+Dieses Muster funktioniert aber nur, wenn eine Regel sich ihre Daten selbst besorgen darf. Unter
+Clean darf ausschließlich der Interactor Ports rufen -- also muss für jede neue Regel **auch der
+Interactor** erweitert werden, weil nur er weiß, welche Daten zu beschaffen sind. Der Interactor
+sammelt so nach und nach Wissen über die Datenbedarfe sämtlicher Fachregeln an. Das ist genau die
+Kopplung, die Clean mit §3.3 ("der Interactor entscheidet nicht, er orchestriert") verhindern will
+-- hier durch die Hintertür der Datenbeschaffung.
+
+[cols="2,3,3",options="header"]
+|===
+| Neue Anspruchsart hinzufügen | Onion / Hexagonal | Clean (Eschhold)
+
+| Zu ändernde Dateien
+| 2 (neue Regelklasse + Registrierung)
+| 3--4 (Regelklasse + Interactor + ggf. neuer Output Port + Adapter)
+
+| Wer kennt den Datenbedarf der Regel?
+| die Regel selbst
+| zusätzlich der Interactor
+
+| Open/Closed erfüllt?
+| ja
+| nein -- der Interactor wächst mit jeder Regel
+|===
+
+=== Warum nicht die anderen beiden
+
+**Clean (Eschhold)** ist die technisch sauberste und mit Abstand am besten prüfbare Variante --
+aber sie arbeitet hier gegen die Fachlichkeit. Der Referenz-Guide sagt das in der pragmatischen
+Anmerkung zu §3.8 selbst: bei stark konfigurationsgetriebenen Modulen lieber eine dokumentierte,
+modulweise Ausnahme machen und Onion verwenden, statt die strikte Regel zu erzwingen. `dojo1`
+zeigt den Effekt im Kleinen -- die Domäne hält die Reinheit fast durch und bricht sie ausgerechnet
+dort, wo sie Daten von außen braucht (Systemuhr in `isUnter18()`).
+
+**Hexagonal (Cockburn)** würde funktionieren: Es erlaubt der Domäne Port-Zugriff (§4) und verlangt
+zugleich Input Ports (§1.5) -- beides ist hier erwünscht. Es ist aber die schwächste Fitness
+Function der drei. Außer "Adapter hängen an Ports, nie umgekehrt" gibt es kaum etwas maschinell zu
+prüfen, und `solution1` hat ausgerechnet diese eine Regel gebrochen. Onions Dependency Rule
+("alles zeigt nach innen") ist eine ArchUnit-Regel und fängt denselben Fehler.
+
+=== Die genauere Antwort: die beiden Kontexte haben unterschiedliche Form
+
+Lässt man die modulweise Ausnahme aus §3.8 zu, ist das hier keine Notlösung, sondern die
+passendere Antwort:
+
+[cols="1,2,2",options="header"]
+|===
+| Kontext | Charakter | Passende Variante
+
+| `anspruch`
+| regelreich, konfigurationsgetrieben, wachsender Regelkatalog; hier landen beide offenen
+  Iterationen (6 und 7)
+| **Onion** -- die Regeln besitzen ihre Ports
+
+| `au`
+| orchestrierungsdünn, adapterreich: Messaging rein von der Arztsoftware, DB raus, Error-Queue
+  raus (Nebenszenario 1); fast keine Fachlogik
+| **Clean / Hexagonal** -- Input Port, schlanker Interactor, drei Output Ports
+|===
+
+Für ein Dojo mit zwei kleinen Kontexten würde ich das allerdings nur benennen und nicht umsetzen:
+zwei Varianten in einer 300-Zeilen-Anwendung sind schwerer zu lehren als eine.
+
+=== Der Vorbehalt, der die Frage eigentlich entscheidet
+
+**Für die Fachlichkeit ist Onion die beste Variante. Als Dojo-Übung ist Clean die bessere.**
+
+Ein Dojo will, dass Regelverstöße wehtun und sichtbar werden. Clean ist die einzige der drei
+Varianten, deren Regelwerk sich vollständig als Fitness Function kodieren lässt (§3.4 → §5.1), und
+das Ringen mit Decide-then-Act ist didaktisch wertvoll: Man lernt genau an dieser Reibung, wo die
+Grenze zwischen Fachentscheidung und Datenbeschaffung verläuft. Wenn das Ziel "Disziplin erfahrbar
+machen" ist, ist die Reibung ein Feature und kein Mangel.
+
+Die Antwort hängt also daran, ob das Dojo eine wartbare Anwendung oder eine Lernerfahrung
+produzieren soll. Nach fachlichen Kriterien: Onion.
+
+=== Zielstruktur bei Onion
+
+[mermaid]
+....
+flowchart TB
+  subgraph infra["infrastructure -- aeusserster Ring"]
+    REST["REST-Controller"]
+    ADP["ZeitenAdapter, PersonenAdapter,<br/>AngehoerigeAdapter, RegelwerkAdapter,<br/>ZeitAdapter"]
+    CR["CompositionRoot"]
+  end
+  subgraph app["application"]
+    UC["PruefeAnspruchUseCase (Input Port)"]
+    SVC["PruefeAnspruchService"]
+  end
+  subgraph dom["domain -- innerster Ring"]
+    RULE["domain.rule<br/>Anspruch, EigenAnspruch, KindAnspruch"]
+    PORT["domain.port<br/>ZeitenPort, PersonenPort, AngehoerigePort,<br/>RegelwerkPort, ZeitPort"]
+    MODEL["domain.model<br/>Versicherter, Versicherungszeit, Svnr"]
+  end
+
+  REST --> UC
+  SVC -.implements.-> UC
+  SVC --> RULE
+  RULE --> PORT
+  RULE --> MODEL
+  PORT --> MODEL
+  ADP -.implements.-> PORT
+  CR --> ADP
+  CR --> SVC
+....
+
+```
+at.gepardec.dojo.leistung.anspruch
+├── domain                                   <-- innerster Ring
+│   ├── model      Versicherter, Versicherungszeit, Svnr
+│   ├── rule       Anspruch (Interface), EigenAnspruch, KindAnspruch
+│   └── port       ZeitenPort, PersonenPort, AngehoerigePort,
+│                  RegelwerkPort, ZeitPort   <-- Ports IM Domain-Ring (§2.3)
+├── application    PruefeAnspruchUseCase (Input Port)
+│                  PruefeAnspruchService (dünn, Transaktionsgrenze)
+└── infrastructure Adapter je Umsystem, REST-Controller, CompositionRoot
+```
+
+Drei Dinge, die aus den bestehenden Lösungen übernommen gehören:
+
+. **Das Strategie-Muster aus `solution1`** als `domain.rule` -- es ist der Grund, warum Onion hier
+  überhaupt gewinnt.
+. **Der Kontext-Adapter aus `dojo1`** -- `au` bekommt einen eigenen Port, den ein Adapter auf
+  `anspruch.application.PruefeAnspruchUseCase` abbildet. Onion ist bei Input Ports schweigsam, es
+  verbietet sie aber nicht, und bei zwei treibenden Technologien (Web für ANSP, Messaging für AU)
+  plus einer Kontextgrenze zahlt sich der Port aus.
+. **Constructor Injection statt Service Locator** -- die Composition Root gehört nach
+  `infrastructure`, nicht als statische Factory neben die Ports. Das ist der Fehler, den
+  `solution1` gemacht hat (<<variante>>), und er ist unter Onion genauso falsch wie unter
+  Hexagonal.
+
+Als Fitness Function trägt für diese Struktur im Wesentlichen die Onion-Dependency-Regel:
+
+....
+classes().that().resideInAPackage("..anspruch.domain..")
+    .should().onlyDependOnClassesThat()
+    .resideInAnyPackage("..anspruch.domain..", "java..");
+....
+
+Sie hätte in `solution1` sofort angeschlagen: `EigenAnspruch` und `KindAnspruch` importieren
+`anspruch.ports.*`, das außerhalb von `domain` liegt -- und über `DomainPortFactory` hängt daran
+die gesamte Adapterschicht. Der schwerste Befund dieser Lösung, gefunden von einer Zeile.
+
+`dojo1`s Systemuhr-Zugriff fängt sie dagegen **nicht**: `java.time.LocalDate` fällt unter das
+erlaubte `java..`. Dafür braucht es eine zweite, aufrufbezogene Regel -- die man ohnehin haben
+will, sobald ein `ZeitPort` existiert:
+
+....
+noClasses().that().resideInAPackage("..domain..")
+    .should().callMethod(LocalDate.class, "now");
+....
+
+Zwei Regeln, die beiden schwersten Befunde beider Lösungen. Das ist der eigentliche Ertrag einer
+festgelegten Zielvariante: Sie macht aus Architekturdiskussionen ausführbare Tests.
+
+[[onion]]
+== Nachtrag: dritte Lösung `feature/onion`
+
+Die in <<zielvariante>> empfohlene Variante wurde umgesetzt -- damit ist die Empfehlung nicht mehr
+Behauptung, sondern überprüfbar. Der Branch `feature/onion` zweigt von `main` ab und ist damit ein
+echter Peer der beiden anderen Lösungen.
+
+Umgesetzt in drei OpenSpec-Changes, bewusst getrennt, damit pro Anforderungsänderung ablesbar
+bleibt, welche Pakete angefasst werden mussten:
+
+[cols="2,1,3",options="header"]
+|===
+| Change | Iterationen | Ergebnis
+
+| `add-onion-anspruch-baseline` | 1--5 | Vergleichsstand, gleicher Umfang wie beide anderen Branches
+| `add-stichtag-port` | 7 | Stichtag über Port; Domänenring unverändert
+| `add-regelwerk-port` | 6 | Altersgrenze aus dem Regelwerk; Application-Schicht unverändert
+|===
+
+Iteration 7 wurde vor Iteration 6 umgesetzt: Der Nachweis von Iteration 6 ("Altersgrenze 27 →
+Eberhard hat Anspruch") hängt an Eberhards Alter am Stichtag und wäre gegen `LocalDate.now()`
+ab April 2029 lautlos gekippt.
+
+=== Einordnung nach §0 des Referenz-Guides
+
+[cols="2,3",options="header"]
+|===
+| Kriterium | `feature/onion`
+
+| Wo liegen die Ports?
+| `anspruch.domain.port`, `au.domain.port` -- **innerhalb** des Domänenrings
+| Importiert eine Domänenklasse einen Port?
+| Ja: `EigenAnspruch`, `KindAnspruch` und `AuMeldungService` nutzen ihre Ports direkt
+| **Ergebnis**
+| **Onion Architecture (Palermo)** -- §2.3 erfüllt, §2.6 ("Domain Services may depend on
+  domain-declared port interfaces directly") ist genau der genutzte Freiraum
+|===
+
+=== Kennzahlen im Vergleich
+
+[cols="2,1,1,1",options="header"]
+|===
+| | `dojo1` | `solution1` | `onion`
+
+| Variante | Clean (Eschhold) | Hexagonal (Cockburn) | Onion (Palermo)
+| Iterationen | 1--5 | 1--7 | 1--7
+| Java-Dateien `src/main` | 18 | 19 | 31
+| Zeilen `src/main` | 357 | 301 | 916
+| Java-Dateien `src/test` | 11 | 3 | 13
+| Zeilen `src/test` | 355 | 119 | 961
+| Tests bei `mvn test` | 19 (9 leer, 2 ohne Assertion) | 9 | 68
+| Architekturregeln im Build | keine | keine | 6 (ArchUnit)
+|===
+
+Der Umfang ist deutlich größer, und das ist kein reiner Gewinn. Ein Teil geht auf mehr Fachlichkeit
+(zwei zusätzliche Iterationen, Ergebnistyp statt `void`, `Optional` statt `null`), ein Teil auf
+ausführliche Kommentare, die die Architekturentscheidungen am Ort ihrer Wirkung festhalten, und
+ein Teil auf echte Zeremonie: getrennte Portpakete, zwei Zeitadapter, eine Composition Root. Wer
+nur Iterationen 1--5 ohne Fitness Functions braucht, kommt mit `solution1`s 301 Zeilen aus.
+
+=== Wurden die Leaks der beiden anderen Lösungen vermieden?
+
+[cols="3,1,2",options="header"]
+|===
+| Befund aus <<variante>> | vermieden? | wie
+
+| `ports → adapters` (solution1)
+| ja
+| Composition Root liegt in `infrastructure`, kein Service Locator
+
+| kein Input Port (solution1)
+| ja
+| `PruefeAnspruchUseCase`, `ErstelleAuMeldungUseCase`
+
+| `au` ohne Hexagon (solution1)
+| ja
+| eigener Domänenring, zwei Ports, zwei Adapter
+
+| `au.domain` → `anspruch.domain` (solution1)
+| ja
+| eigener Port + Adapter; ArchUnit-Regel sichert es ab
+
+| `Svnr` ohne Validierung/`equals` (solution1)
+| ja
+| `record` mit Prüfsummenvalidierung im Shared Kernel
+
+| Off-by-one an der Altersgrenze (solution1)
+| ja
+| `geburtsdatum.plusYears(grenze).isAfter(stichtag)`; eigener Test für den Randfall
+
+| Systemuhr in der Domäne (dojo1)
+| ja
+| Stichtag wird durchgereicht; ArchUnit-Regel `systemuhrNurImZeitAdapter`
+
+| Geschäftsregel im Interactor (dojo1)
+| ja
+| die Regel "nur bei Anspruch" liegt in `au.domain.AuMeldungService`
+
+| kein Ergebnis aus dem AU-UseCase (dojo1)
+| ja
+| `MeldungsErgebnis` (gespeichert / abgelehnt mit Grund)
+
+| Integrationstest läuft nicht (dojo1)
+| ja
+| Endung `Test`, läuft bei `mvn test` mit
+
+| NPE bei unbekannter SVNR (beide)
+| ja
+| `PersonenPort` liefert `Optional`; eigener Test
+
+| `Svnr → SvnrValidator` (dojo1)
+| **nein**
+| bewusst übernommen und als benannte Ausnahme in einer eigenen ArchUnit-Regel geführt
+|===
+
+=== Was die Architekturvorgaben 6 und 7 tatsächlich gekostet haben
+
+Die Trennung in drei Changes war genau dafür da. Die berührten Pakete sind der Diff des jeweiligen
+Changes, nicht geschätzt:
+
+[cols="1,2,2,2",options="header"]
+|===
+| | `dojo1` (Clean) | `solution1` (Hexagonal) | `onion` (Onion)
+
+| **Iteration 6** +
+  Regelwerk
+| nicht umgesetzt. Die `18` steht in `Versicherter.isUnter18()`, also im Domänenring. Nötig wären
+  ein neuer Port, ein Adapter, eine Änderung an `Versicherter` -- und weil Clean der Domäne den
+  Portzugriff verbietet, zusätzlich eine Decide-then-Act-Aufteilung samt Änderung am Interactor.
+| Naht vorhanden (`AnspruchRegeln`), aber `AnspruchRegelnImpl` liefert hartcodiert `18`. Die
+  Datenbank fehlt.
+| **2 neue + 3 geänderte Dateien.** Neu: `RegelwerkPort`, `RegelwerkParameterFehltException`,
+  `RegelwerkAdapter`. Geändert: `KindAnspruch` (Konstante → Portaufruf), eine Zeile in der
+  Composition Root, der Regeltest. +
+  **`application` und der gesamte `au`-Kontext blieben unberührt.**
+
+| **Iteration 7** +
+  Stichtag
+| nicht umgesetzt. `Versicherter.isUnter18()` und der QueryHandler rufen beide `LocalDate.now()`.
+  Iteration 7 müsste damit `domain` **und** `application` anfassen.
+| umgesetzt, aber mit `setToday()`/`resetToday()` im Produktionsport auf einem statischen,
+  veränderlichen Singleton. Tests brauchen `@BeforeEach`/`@AfterEach` und sind
+  reihenfolgeabhängig.
+| **3 neue + 2 geänderte Dateien.** Neu: `ZeitPort` (nur lesend), `SystemZeitAdapter`,
+  `FixerZeitAdapter`. Geändert: `PruefeAnspruchService`, ein zweiter Konstruktor der Composition
+  Root. +
+  **Der Domänenring blieb unverändert**, weil er den Stichtag seit der Baseline als Parameter
+  bekommt.
+|===
+
+Das bestätigt die Herleitung aus <<zielvariante>> an der Stelle, an der sie am meisten behauptet
+hatte: Iteration 6 kostet in der Onion-Variante keinen Eingriff in die Application-Schicht, weil
+die Regel sich ihren Parameter selbst holen darf. Unter Clean wäre genau dieser Eingriff nötig
+gewesen -- und mit jeder weiteren Regel ein weiterer.
+
+Fairerweise gehört dazu: Der Vorteil ist hier klein, weil es genau einen Parameter und zwei Regeln
+gibt. Er wächst erst mit dem Regelkatalog, den die Aufgabenstellung ankündigt ("umfangreiches
+Regelwerk"). Bei zwei Regeln hätte auch Decide-then-Act niemandem wehgetan.
+
+=== Die Fitness Function, empirisch geprüft
+
+Die sechs ArchUnit-Regeln wurden gegen die beiden anderen Branches laufen gelassen (Build in
+temporären Worktrees). Sie melden genau die in diesem Dokument beschriebenen Verstöße:
+
+....
+SOLUTION1: Constructor <anspruch.domain.EigenAnspruch.<init>()> calls method
+           <anspruch.ports.DomainPortFactory.getZeitenService()> in (EigenAnspruch.java:7)
+           ... 3 weitere in KindAnspruch.java:12-14
+
+DOJO1:     Method <leistung.anspruch.domain.Versicherter.isUnter18()> calls method
+           <java.time.LocalDate.now()> in (Versicherter.java:52)
+....
+
+Die Onion-Dependency-Regel gegen `dojo1`s Domänenring schlägt dagegen **nicht** an -- passend zum
+Hauptbefund, dass `dojo1` die Portrichtung sauber hält und nur an der Systemuhr scheitert.
+
+=== Was auch diese Lösung nicht hat
+
+Weiterhin keine echte Datenbank (der `RegelwerkAdapter` ist eine Ablage im Speicher, der
+`AuMeldungAdapter` eine Liste), keine REST-Schicht, kein DI-Container, keine Error-Queue. Der
+Unterschied zu den beiden anderen Lösungen ist nicht, dass diese Dinge da wären, sondern dass sie
+sämtlich hinter Ports liegen und die Attrappen als solche benannt sind.
+
+Offen geblieben ist eine bewusste Unschärfe: `ZeitPort` liegt im Domänenring, obwohl ihn nur die
+Application-Schicht nutzt. Begründung und Umschlagpunkt stehen im Javadoc der Klasse.
+
+== Nicht bewertet
+
+Bewusst außerhalb des Vergleichs, weil in **beiden** Lösungen nicht vorhanden:
+
+* Keine echte REST-Schicht. `dojo1`s `LeistungsanspruchRESTService.pruefeAnspruch` gibt `null`
+  zurück und ist auskommentiert; `solution1` hat mit `AnspruchWebCheck` nur einen POJO-UseCase.
+* Keine echte Persistenz. `JpaAuMeldungRepository` loggt; `solution1` hat gar kein Repository.
+* Kein DI-Container, kein Anwendungsrahmen, keine `main`-Klasse in beiden.
+* Keine Datenbank für das Regelwerk (Iteration 6) in beiden.
+* Keine Error-Queue (Nebenszenario 1) in beiden.
+
+Aussagen über Produktionstauglichkeit lassen sich aus diesem Vergleich daher nicht ableiten. Der
+Vergleich betrifft ausschließlich Paketstruktur, Abhängigkeitsrichtung und Testhaltung -- also
+genau das, was `doc/README.md` als Zweck des Dojos benennt.

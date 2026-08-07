@@ -2,6 +2,7 @@ package at.gepardec.dojo.leistung.anspruch.domain.rule;
 
 import at.gepardec.dojo.leistung.anspruch.domain.port.AngehoerigePort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.PersonenPort;
+import at.gepardec.dojo.leistung.anspruch.domain.port.RegelwerkPort;
 import at.gepardec.dojo.leistung.shared.domain.Svnr;
 import at.gepardec.dojo.test.TestData;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,13 +37,16 @@ class KindAnspruchTest {
     @Mock
     private AngehoerigePort angehoerigePort;
     @Mock
+    private RegelwerkPort regelwerkPort;
+    @Mock
     private Anspruch eigenAnspruch;
 
     private KindAnspruch kindAnspruch;
 
     @BeforeEach
     void setUp() {
-        kindAnspruch = new KindAnspruch(personenPort, angehoerigePort, eigenAnspruch);
+        kindAnspruch = new KindAnspruch(personenPort, angehoerigePort, regelwerkPort, eigenAnspruch);
+        lenient().when(regelwerkPort.altersgrenzeMitversicherung()).thenReturn(18);
     }
 
     @Test
@@ -101,6 +105,19 @@ class KindAnspruchTest {
         assertThat(kindAnspruch.anspruch(ANGIE, STICHTAG)).isFalse();
     }
 
+    /**
+     * Iteration 6: Die Fachabteilung hebt die Altersgrenze an. Eberhard (24 am Stichtag) fällt
+     * damit unter die Mitversicherung -- ohne dass Programmcode geändert wurde.
+     */
+    @Test
+    void angehobeneAltersgrenzeWirktSofort() {
+        when(regelwerkPort.altersgrenzeMitversicherung()).thenReturn(27);
+        when(personenPort.geburtsdatum(EBERHARD)).thenReturn(Optional.of(GEBURT_EBERHARD));
+        when(angehoerigePort.eltern(EBERHARD)).thenReturn(List.of(KURT));
+        when(eigenAnspruch.anspruch(KURT, STICHTAG)).thenReturn(true);
+
+        assertThat(kindAnspruch.anspruch(EBERHARD, STICHTAG)).isTrue();
+    }
 
     @Test
     void unbekanntePersonFuehrtNichtZumFehler() {

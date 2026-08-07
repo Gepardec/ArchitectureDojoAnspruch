@@ -75,3 +75,14 @@ Neuer Port `anspruch.domain.port.ZeitPort` mit ausschließlich lesender Operatio
 `SystemZeitAdapter` (Regelbetrieb) und `FixerZeitAdapter` (Tests). Kein Umschalten über globalen
 Zustand. Der Domänenring blieb unverändert, weil er den Stichtag von Anfang an als Parameter
 bekommt.
+
+## Iteration 6: Regelwerk
+Architekturvorgabe: Konstanten wie die Altersgrenze für Kinder sind Teil eines umfangreichen
+Regelwerks, das die Fachabteilung ändern können muss. Die Altersgrenze wird aus einer Datenbank
+gelesen.
+
+### Umsetzung auf feature/onion
+Neuer Port `anspruch.domain.port.RegelwerkPort`; `KindAnspruch` liest die Grenze selbst.
+Fehlt ein Parameter, bricht die Prüfung ab -- kein stiller Rückfall auf einen Wert im Code.
+Berührt wurden ausschließlich `anspruch.domain` und `anspruch.infrastructure`; die
+Application-Schicht und der AU-Kontext blieben unverändert.
