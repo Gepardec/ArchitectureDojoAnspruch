@@ -37,3 +37,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+### Dojo
+# Nur die AsciiDoc-Quelle wird versioniert, nicht der PDF-Export.
+result.pdf
