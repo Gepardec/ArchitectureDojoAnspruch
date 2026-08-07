@@ -40,3 +40,14 @@ Dies ist ein Use Case aus dem Leistungswesen der Sozialversicherung im Bereich A
 ## Iteration 3: Hintergrund
 Krankmeldungen bzw. Arbeitsunfähiglkeit (AU) ist in der SV ein Bereich des Leistungswesen. 
 Technisch wird es von der Applikation Leistung abgearbeitet.
+
+
+
+# Iteration 4: AU-Fälle dürfen nur bei aktiven Anspruch gespeichert werden
+
+## Geschäftsregel
+Ergänzung der Regeln für Arbeitsunfähigkeit:
+ * Nur wenn eine Person einen aktiven Anspruch hat, dann ist die AU-Meldung gültig und darf damit gespeichert werden.
+
+## Testfälle
+   * Eberhard geht zum Arzt. Die elektronische Krankmeldung wird nicht gespeichert.

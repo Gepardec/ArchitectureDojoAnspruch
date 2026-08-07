@@ -8,4 +8,11 @@ public record Svnr(String nummer) {
         if (!valid) throw new IllegalArgumentException("Ungültige Svnr: " + nummer);
         this.nummer = nummer;
     }
+
+    @Override
+    public String toString() {
+        return "Svnr{" +
+                "nummer='" + nummer + '\'' +
+                '}';
+    }
 }
