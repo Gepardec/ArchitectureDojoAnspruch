@@ -1,31 +1,33 @@
 package at.gepardec.dojo.leistung.anspruch.application;
 
 import at.gepardec.dojo.leistung.anspruch.domain.AnspruchService;
+import at.gepardec.dojo.leistung.anspruch.domain.port.ZeitPort;
 import at.gepardec.dojo.leistung.shared.domain.Svnr;
 
-import java.time.LocalDate;
 import java.util.Objects;
 
 /**
  * Dünner Orchestrierer: ermittelt den Stichtag und übergibt an die Domäne. Fachliche
  * Entscheidungen trifft er keine -- die liegen sämtlich in {@code domain.rule}.
  * <p>
- * Der Aufruf von {@link LocalDate#now()} ist der letzte verbliebene Uhrzugriff der Anwendung.
- * Der Change {@code add-stichtag-port} (Iteration 7) ersetzt ihn durch einen Port. Der Diff zeigt
- * dann, was ein vorgebbares Tagesdatum in dieser Variante kostet.
+ * Der Stichtag kommt seit {@code add-stichtag-port} (Iteration 7) über den {@link ZeitPort}.
+ * Damit gibt es in der gesamten Anwendung genau einen Aufruf der Systemuhr, und der steht im
+ * dafür vorgesehenen Adapter.
  */
 public class PruefeAnspruchService implements PruefeAnspruchUseCase {
 
     private final AnspruchService anspruchService;
+    private final ZeitPort zeitPort;
 
-    public PruefeAnspruchService(AnspruchService anspruchService) {
+    public PruefeAnspruchService(AnspruchService anspruchService, ZeitPort zeitPort) {
         this.anspruchService = Objects.requireNonNull(anspruchService, "anspruchService");
+        this.zeitPort = Objects.requireNonNull(zeitPort, "zeitPort");
     }
 
     @Override
     public boolean hatAnspruch(Svnr svnr) {
         Objects.requireNonNull(svnr, "svnr");
 
-        return anspruchService.hatAnspruch(svnr, LocalDate.now());
+        return anspruchService.hatAnspruch(svnr, zeitPort.heute());
     }
 }

@@ -14,3 +14,7 @@ Dieses Dokument beschreibt die Geschäftsregeln für den Bereich Anspruch aus de
    * Kinder unter 18 Jahren haben Anspruch, wenn mindestens ein Elternteil einen Eigenanspruch hat.
    * "Unter 18" heißt: Am Tag des 18. Geburtstags endet der Kindanspruch.
    * Beim Elternteil zählt ausschließlich der Eigenanspruch, nicht ein eigener Kindanspruch.
+
+## Iteration 7: Stichtag
+   * Die Anspruchsprüfung erfolgt zu einem Stichtag. Im Regelbetrieb ist das der heutige Tag.
+   * Für Tests ist der Stichtag vorgebbar; verwendet wird der 5.8.2026.

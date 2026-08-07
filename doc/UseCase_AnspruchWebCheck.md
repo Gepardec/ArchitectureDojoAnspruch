@@ -65,3 +65,13 @@ Jede Anspruchsart ist eine eigene `Anspruch`-Implementierung -- eine weitere Art
 
 Der Stichtag wird der Domäne übergeben und nicht aus der Systemuhr gelesen. Die Architekturregeln
 stehen als ausführbarer Test in `ArchitectureRulesTest`.
+
+## Iteration 7: Teststabilität
+Architekturvorgabe: Das aktuelle Datum muss für Tests vorgegeben werden können; Testwert ist der
+5.8.2026.
+
+### Umsetzung auf feature/onion
+Neuer Port `anspruch.domain.port.ZeitPort` mit ausschließlich lesender Operation, dazu
+`SystemZeitAdapter` (Regelbetrieb) und `FixerZeitAdapter` (Tests). Kein Umschalten über globalen
+Zustand. Der Domänenring blieb unverändert, weil er den Stichtag von Anfang an als Parameter
+bekommt.

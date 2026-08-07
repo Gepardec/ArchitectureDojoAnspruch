@@ -6,11 +6,13 @@ import at.gepardec.dojo.leistung.anspruch.application.PruefeAnspruchUseCase;
 import at.gepardec.dojo.leistung.anspruch.domain.AnspruchService;
 import at.gepardec.dojo.leistung.anspruch.domain.port.AngehoerigePort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.PersonenPort;
+import at.gepardec.dojo.leistung.anspruch.domain.port.ZeitPort;
 import at.gepardec.dojo.leistung.anspruch.domain.port.ZeitenPort;
 import at.gepardec.dojo.leistung.anspruch.domain.rule.Anspruch;
 import at.gepardec.dojo.leistung.anspruch.domain.rule.EigenAnspruch;
 import at.gepardec.dojo.leistung.anspruch.domain.rule.KindAnspruch;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.AngehoerigeAdapter;
+import at.gepardec.dojo.leistung.anspruch.infrastructure.SystemZeitAdapter;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.AnspruchWebCheck;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.PersonenAdapter;
 import at.gepardec.dojo.leistung.anspruch.infrastructure.ZeitenAdapter;
@@ -24,6 +26,7 @@ import at.gepardec.dojo.personen.PersonenService;
 import at.gepardec.dojo.zeiten.ZeitenService;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Verdrahtet die Anwendung. Die einzige Klasse, die alle Ringe kennen darf -- deshalb liegt sie
@@ -44,7 +47,18 @@ public class CompositionRoot {
     private final ErstelleAuMeldungUseCase erstelleAuMeldung;
     private final AuMeldungAdapter auMeldungAdapter;
 
+    /** Regelbetrieb: Der Stichtag kommt aus der Systemuhr. */
     public CompositionRoot() {
+        this(new SystemZeitAdapter());
+    }
+
+    /**
+     * Verdrahtung mit einer wählbaren Zeitquelle. Tests übergeben hier einen
+     * {@code FixerZeitAdapter} und werden damit zeitstabil -- ohne globalen Zustand umzuschalten.
+     */
+    public CompositionRoot(ZeitPort zeitPort) {
+        Objects.requireNonNull(zeitPort, "zeitPort");
+
         // --- Anspruch: Adapter an die Umsysteme ---
         ZeitenPort zeitenPort = new ZeitenAdapter(new ZeitenService());
         PersonenPort personenPort = new PersonenAdapter(new PersonenService());
@@ -56,7 +70,7 @@ public class CompositionRoot {
         Anspruch kindAnspruch = new KindAnspruch(personenPort, angehoerigePort, eigenAnspruch);
         AnspruchService anspruchService = new AnspruchService(List.of(eigenAnspruch, kindAnspruch));
 
-        PruefeAnspruchUseCase pruefeAnspruch = new PruefeAnspruchService(anspruchService);
+        PruefeAnspruchUseCase pruefeAnspruch = new PruefeAnspruchService(anspruchService, zeitPort);
         this.anspruchWebCheck = new AnspruchWebCheck(pruefeAnspruch);
 
         // --- AU: eigener Port an der Kontextgrenze ---

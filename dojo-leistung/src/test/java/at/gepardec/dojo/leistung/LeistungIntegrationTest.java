@@ -1,5 +1,6 @@
 package at.gepardec.dojo.leistung;
 
+import at.gepardec.dojo.leistung.anspruch.infrastructure.FixerZeitAdapter;
 import at.gepardec.dojo.leistung.au.domain.model.AuMeldung;
 import at.gepardec.dojo.leistung.au.domain.model.MeldungsErgebnis;
 import at.gepardec.dojo.leistung.infrastructure.CompositionRoot;
@@ -20,19 +21,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code feature/dojo1} heißt der entsprechende Test {@code ...SIT}, wird von Surefire nicht
  * erfasst und lief mangels Failsafe-Konfiguration nie.
  * <p>
- * <b>Noch zeitabhängig:</b> Der Stichtag kommt derzeit aus der Systemuhr. Der Change
- * {@code add-stichtag-port} (Iteration 7) stellt diese Tests auf ein festes Datum um; erst dann
- * sind sie dauerhaft stabil.
+ * <b>Zeitstabil seit Iteration 7:</b> Der Stichtag ist mit dem {@link FixerZeitAdapter} auf den
+ * 05.08.2026 festgelegt. Die Ergebnisse ändern sich damit nicht mehr dadurch, dass die Familie
+ * Leonhardsberger älter wird.
  */
 class LeistungIntegrationTest {
 
+    private static final LocalDate STICHTAG = LocalDate.of(2026, 8, 5);
     private static final LocalDate AU_BEGINN = LocalDate.of(2026, 8, 6);
 
     private CompositionRoot anwendung;
 
     @BeforeEach
     void setUp() {
-        anwendung = new CompositionRoot();
+        anwendung = new CompositionRoot(new FixerZeitAdapter(STICHTAG));
     }
 
     @Test
@@ -78,6 +80,18 @@ class LeistungIntegrationTest {
 
         assertThat(ergebnis.istGespeichert()).isFalse();
         assertThat(anwendung.auMeldungAblage().gespeicherte()).isEmpty();
+    }
+
+    /**
+     * Der Nachweis, dass die Zeitabhängigkeit selbst geprüft ist und nicht nur wegkonfiguriert:
+     * 2029 ist Angie 19 und damit über der Altersgrenze.
+     */
+    @Test
+    void angieHatMitNeunzehnKeinenAnspruchMehr() {
+        CompositionRoot spaeter = new CompositionRoot(new FixerZeitAdapter(LocalDate.of(2029, 8, 5)));
+
+        assertThat(spaeter.anspruchWebCheck().pruefe(TestData.SVNR_ANGIE))
+                .isEqualTo("Kein Anspruch");
     }
 
     @Test

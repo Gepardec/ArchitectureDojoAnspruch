@@ -1,5 +1,6 @@
 package at.gepardec.dojo.leistung;
 
+import at.gepardec.dojo.leistung.anspruch.infrastructure.SystemZeitAdapter;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -115,4 +116,20 @@ class ArchitectureRulesTest {
         regel.check(klassen);
     }
 
+    /**
+     * Seit {@code add-stichtag-port} (Iteration 7) verschärft: Die Systemuhr darf nirgends mehr
+     * stehen außer im dafür vorgesehenen Adapter.
+     * <p>
+     * Die vorherige Fassung prüfte nur den Domänenring und hätte den Aufruf im Application
+     * Service durchgelassen -- genau den, den Iteration 7 entfernt.
+     */
+    @Test
+    void systemuhrNurImZeitAdapter() {
+        ArchRule regel = noClasses()
+                .that().doNotBelongToAnyOf(SystemZeitAdapter.class)
+                .should().callMethod(LocalDate.class, "now")
+                .because("das Tagesdatum kommt über den ZeitPort, damit Testfälle zeitstabil sind");
+
+        regel.check(klassen);
+    }
 }
