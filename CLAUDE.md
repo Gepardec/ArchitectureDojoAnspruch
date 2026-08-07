@@ -5,111 +5,168 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Was dieses Repo ist
 
 Ein **Architektur-Dojo** (siehe `doc/README.md`), kein Produktivsystem. Ziel ist das Erproben von
-Paketstrukturen und Abhängigkeiten (hexagonale Architektur / Ports & Adapters) anhand vereinfachter
-UseCases der österreichischen Sozialversicherung. Details wie ExceptionHandling, Persistenz oder
-Edge-Cases sind bewusst nachrangig — die Paketstruktur und die Richtung der Abhängigkeiten sind das
-eigentliche Artefakt.
+Paketstrukturen und Abhängigkeiten anhand vereinfachter UseCases der österreichischen
+Sozialversicherung. Details wie ExceptionHandling, Persistenz oder Edge-Cases sind bewusst
+nachrangig -- die Paketstruktur und die Richtung der Abhängigkeiten sind das eigentliche Artefakt.
 
 Dokumentation und Code sind auf Deutsch (Fachbegriffe, Klassennamen, Kommentare). Das beibehalten.
 
-## Ablauf (wichtig für jede Änderung)
+### Drei Lösungsversionen
 
-Der Sensei stellt pro Iteration neue Geschäftsregeln vor. Diese werden **zuerst in die Doku-Dateien
-eingefügt** (`doc/UseCase_*.md`, `doc/GeschäftsRegeln_*.md`), dann implementiert, und am Ende der
-Iteration wird alles gemeinsam committed — Doku + Code in einem Commit, Commit-Message im Stil
-`iteration N: <kurze Beschreibung>`. Der Zweck ist Nachvollziehbarkeit: welche Pakete/Klassen mussten
-für welche Anforderungsänderung angefasst werden. Also niemals Code ohne die zugehörige Doku-Änderung
-committen.
+Dasselbe Dojo ist dreimal gelöst. Der Vergleich steht in `result.adoc` (AsciiDoc, Diagramme
+brauchen Kroki bzw. asciidoctor-diagram).
+
+| Branch | Autor | Variante | Iterationen |
+|---|---|---|---|
+| `feature/dojo1` | Implementierer-Gruppe | Clean Architecture (Eschhold) | 1--5 |
+| `feature/solution1` | Sensei (Referenzlösung) | Hexagonal (Cockburn) | 1--7 |
+| `feature/onion` | -- | **Onion (Palermo)** | 1--7 |
+
+**Dieser Branch ist `feature/onion`.** Die Variantenwahl ist in `result.adoc` im Kapitel
+"Empfehlung: Welche Variante passt zu dieser Fachlichkeit?" begründet. Wer hier arbeitet, arbeitet
+an der Onion-Lösung -- die Beschreibungen unten gelten nicht für die beiden anderen Branches.
 
 ## Module
 
-- `dojo-external-domains` — Stubs für externe Systeme (ZeitenService/MVB, PersonenService/ZPV,
-  AngehoerigeService, SvnrValidator, TestData). **Hier wird nichts geändert.** Die Services liefern
-  hartcodierte Daten für die Familie Leonhardsberger aus `doc/testcases.md`.
-- `dojo-leistung` — hier wird die Lösung implementiert.
+- `dojo-external-domains` -- Stubs für externe Systeme (`ZeitenService`/MVB, `PersonenService`/ZPV,
+  `AngehoerigeService`, `SvnrValidator`, `TestData`). **Hier wird nichts geändert.** Die Services
+  liefern hartcodierte Daten für die Familie Leonhardsberger aus `doc/testcases.md`.
+- `dojo-leistung` -- die Lösung.
 
 ## Build & Test
 
 ```bash
-mvn clean install          # Vollbuild beider Module
-mvn test                   # alle Unit-Tests
-mvn -pl dojo-leistung test # nur das Lösungsmodul
-mvn -pl dojo-leistung test -Dtest=VersicherterTest          # eine Testklasse
-mvn -pl dojo-leistung test -Dtest=VersicherterTest#testIsVersichert_containedDate
-mvn -pl dojo-leistung test -Dtest=PruefeLeistungsanspruchUseCaseSIT
+mvn clean install                                    # Vollbuild beider Module
+mvn test                                             # alle Tests (8 + 68)
+mvn -pl dojo-leistung test                           # nur das Lösungsmodul
+mvn -pl dojo-leistung test -Dtest=KindAnspruchTest   # eine Testklasse
+mvn -pl dojo-leistung test -Dtest=ArchitectureRulesTest   # nur die Architekturregeln
 ```
 
-Java 17, JUnit 5 + AssertJ. Kein Failsafe-Plugin konfiguriert: Klassen mit Endung `SIT`
-(derzeit nur `PruefeLeistungsanspruchUseCaseSIT`) werden von Surefire **nicht** automatisch
-ausgeführt und müssen explizit angestoßen werden — mit `-pl dojo-leistung`, sonst scheitert der
-Reaktor an "No tests were executed" in `dojo-external-domains`. Tests mit Endung `Test` unter
-`src/test/java/it/...` laufen dagegen im normalen `mvn test` mit.
+Java 17, JUnit 5, AssertJ, Mockito, ArchUnit. Der Integrationstest heißt `LeistungIntegrationTest`
+und läuft bei `mvn test` **mit** -- keine `SIT`-Endung, kein Failsafe nötig. (Auf `feature/dojo1`
+war das anders und der einzige aussagekräftige Integrationstest lief deshalb nie.)
 
-Konsequenz: die Iteration-5-Fälle (Angie, Kurt, Eberhard über den echten Objektgraph) sind
-**ausschließlich** in diesem SIT abgedeckt und laufen bei `mvn test` nicht mit. Nach Änderungen an
-Anspruchslogik oder Adaptern den SIT explizit ausführen.
+`-pl dojo-leistung` setzt voraus, dass `dojo-external-domains` installiert ist; sonst vorher
+`mvn install -DskipTests`.
 
-## Architektur in `dojo-leistung`
-
-Zwei fachliche Bounded Contexts, je mit identischem hexagonalem Schnitt:
+## Architektur: Onion (Palermo)
 
 ```
-at.gepardec.dojo.leistung.
-├── anspruch/          (UC-ANSP-01 Anspruch Web Check)
-│   ├── api/           REST-Einstieg (LeistungsanspruchRESTService)
-│   ├── application/   QueryHandler + application/port/ (UseCase-Interface, Repository-Interface)
-│   ├── domain/        Versicherter, AVersicherungszeit — reine Fachlogik
-│   └── infrastructure/VersicherterAdapter → externe Services
-├── au/                (UC-AU-01 Elektronische Krankmeldung)
-│   ├── api/ application/ domain/ infrastructure/  (analog)
-└── shared/domain/     Svnr (kontextübergreifendes Value Object)
+at.gepardec.dojo.leistung
+├── shared/domain          Svnr  -- Shared Kernel, von beiden Kontexten genutzt
+├── anspruch
+│   ├── domain             AnspruchService, RegelwerkParameterFehltException
+│   │   ├── model          Versicherungszeit
+│   │   ├── port           ZeitenPort, PersonenPort, AngehoerigePort,
+│   │   │                  RegelwerkPort, ZeitPort      <-- Ports IM Domänenring
+│   │   └── rule           Anspruch, EigenAnspruch, KindAnspruch
+│   ├── application        PruefeAnspruchUseCase (Input Port), PruefeAnspruchService
+│   └── infrastructure     ZeitenAdapter, PersonenAdapter, AngehoerigeAdapter,
+│                          RegelwerkAdapter, SystemZeitAdapter, FixerZeitAdapter,
+│                          AnspruchWebCheck
+├── au
+│   ├── domain             AuMeldungService
+│   │   ├── model          AuMeldung, MeldungsErgebnis
+│   │   └── port           AuMeldungPort, AnspruchPruefungPort
+│   ├── application        ErstelleAuMeldungUseCase, ErstelleAuMeldungService
+│   └── infrastructure     AuMeldungAdapter, AnspruchPruefungAdapter
+└── infrastructure         CompositionRoot
 ```
 
-Regeln, die der Code aktuell durchhält und die beibehalten werden sollen:
+### Die Regeln, die nicht gebrochen werden dürfen
 
-- **Abhängigkeitsrichtung:** `application.port` ist der nach innen gerichtete Vertrag. `api` kennt nur
-  das UseCase-Interface aus `application.port`, `application` implementiert es und hängt an `domain`,
-  `infrastructure` implementiert die Repository-/Port-Interfaces. Niemand außer `infrastructure`
-  greift auf die Umsysteme `at.gepardec.dojo.{zeiten,personen,angehoerige}` zu. `domain` importiert
-  nichts außerhalb des eigenen Kontexts (außer `shared.domain`).
-- **Ausnahme `at.gepardec.dojo.svnr.SvnrValidator`:** wird als reine Utility behandelt, nicht als
-  Umsystem, und darf deshalb aus `shared.domain.Svnr` heraus verwendet werden. Nur diese eine
-  externe Klasse hat diesen Status.
-- **Kontext-zu-Kontext:** `au` ruft `anspruch` **nicht** direkt auf. Stattdessen definiert `au` einen
-  eigenen Port `au.application.port.LeistungsanspruchPruefungPort`, den
-  `au.infrastructure.LeistungsanspruchPruefungAdapter` auf `anspruch`s UseCase-Interface übersetzt.
-  Neue kontextübergreifende Zugriffe genauso bauen. (`au/api/AuRESTController` importiert derzeit
-  ungenutzt `anspruch.api.Response` — ein Überbleibsel, kein Vorbild.)
-- **Externe Datenmodelle nie durchreichen:** `VersicherterAdapter` mappt `VersicherungsZeit` → `AVersicherungszeit`
-  und `Person` → Geburtsdatum. Domänentypen sehen die externen Records nie.
-- **Verdrahtung passiert in den Tests**, es gibt keinen DI-Container und keine `main`-Klasse —
-  die Integrationstests (`src/test/java/it/...`) bauen den Objektgraph von Hand zusammen und sind
-  damit die faktische Composition Root.
+**`ArchitectureRulesTest` erzwingt sie im Build.** Wer eine dieser Regeln verletzt, bekommt einen
+roten Test, keinen Kommentar im Review. Vor größeren Umbauten die Regeln lesen -- sie sind die
+ausführbare Fassung der Architekturentscheidung.
 
-## Fachliche Regeln (Stand: Iteration 5)
+1. **Ports liegen im Domänenring** (`*.domain.port`), nicht darüber. Das ist das Definitionsmerkmal
+   von Onion und der Punkt, an dem sich diese Lösung von beiden anderen unterscheidet.
+2. **Domänenklassen dürfen ihre Ports direkt nutzen.** `EigenAnspruch`, `KindAnspruch` und
+   `AuMeldungService` tun das. Das ist kein Versehen, sondern der fachliche Grund für die
+   Variantenwahl: Eine Regel weiß selbst, welche Daten sie braucht.
+3. **`*.domain` hängt an nichts außerhalb** -- außer `shared.domain` und `java..`.
+4. **Keine Systemuhr außerhalb von `SystemZeitAdapter`.** Kein `LocalDate.now()` sonstwo. Stichtage
+   werden durchgereicht.
+5. **`au` kennt `anspruch` nur aus `au.infrastructure`** -- über `AnspruchPruefungPort` und
+   `AnspruchPruefungAdapter` (Anti-Corruption Layer). `au.domain` und `au.application` dürfen
+   `anspruch.*` nicht importieren.
+6. **`SvnrValidator` ist die einzige zugelassene Ausnahme** aus `dojo-external-domains` im
+   Domänenring, genutzt nur von `shared.domain.Svnr`. Eine benannte Ausnahme, keine Lücke.
 
-Anspruch (`Versicherter.isVersichert`):
-- Eigenanspruch bei aktiver Versicherungszeit (`bis == null` heißt aktiv).
-- Kinder unter 18: mitversichert, wenn mindestens ein Elternteil Eigenanspruch hat
-  (Elternteil = `AngehoerigenBeziehung.ANG_TYP_ELTERNTEIL`).
+### Weitere Konventionen
 
-AU-Meldung: wird nur gespeichert, wenn Anspruch besteht. Achtung auf den Stichtag — geprüft wird
-aktuell `LocalDate.now()` ("ist der Versicherte *heute* versichert?"), **nicht** `command.auBeginn()`.
-Das war schon einmal ein Missverständnis (Commit `1369d83`); vor einer Änderung klären, welcher
-Stichtag fachlich gemeint ist.
+- **Constructor Injection überall.** Keine statische Factory, kein Service Locator, kein globaler
+  Zustand. `CompositionRoot` ist die einzige Klasse, die alle Ringe kennt -- deshalb liegt sie im
+  äußersten. (Auf `feature/solution1` liegt die Factory im Port-Package und importiert die Adapter:
+  ein Zyklus vom inneren zum äußeren Ring, der schwerste Befund des gesamten Vergleichs.)
+- **Neue Anspruchsart = neue `Anspruch`-Implementierung** plus eine Zeile in der `CompositionRoot`.
+  Bestehende Klassen bleiben unberührt. Wenn eine Änderung das nicht einhält, stimmt der Schnitt
+  nicht.
+- **Ports werden aus dem Bedarf der Regel abgeleitet, nicht vorab entworfen.** Erst die Regel
+  schreiben, das gewünschte Interface dabei erfinden, dann herausziehen. Sonst entstehen technische
+  Signaturen (`getVersicherungsZeiten(String)`) statt fachlicher (`versicherungszeiten(Svnr)`).
+- **Keine Umsystem-Typen in der Domäne.** Adapter mappen (`VersicherungsZeit` → `Versicherungszeit`,
+  `Person` → `Optional<LocalDate>`).
+- **Geschäftsregeln gehören in `domain`, nicht in `application`.** Die Application-Services sind
+  dünne Orchestrierer ohne fachliches `if`.
 
-Erwartete Testfälle: Kurt hat Anspruch (aktive Beschäftigung), Angie hat Anspruch (16, Kind von Kurt),
-Eberhard hat keinen Anspruch (24, nie beschäftigt).
+## Fachliche Regeln (Iterationen 1--7)
 
-Achtung bei den Testdaten: die SVNR-Konstanten in `at.gepardec.dojo.test.TestData` weichen von den in
-`doc/testcases.md` genannten Nummern ab (SVNR_EBERHARD/SVNR_ANGIE sind gegenüber der Doku vertauscht).
-Die Stub-Services sind in sich konsistent mit `TestData` — immer die Konstanten verwenden, nie die
-Nummern aus der Doku abtippen.
+Anspruch besteht, sobald **eine** Regel greift:
 
-## Test-Konventionen
+- **Eigenanspruch:** aktive Versicherungszeit zum Stichtag (`bis == null` heißt aktiv).
+- **Kindanspruch:** unterhalb der Altersgrenze **und** mindestens ein Elternteil mit
+  *Eigenanspruch* (nicht: mit Anspruch). Die Altersgrenze kommt aus dem `RegelwerkPort`, fachlicher
+  Vorgabewert 18. "Unter" heißt: am Tag des Erreichens endet der Anspruch.
 
-Testmethoden folgen `// given / // when / // then`. Mehrere Testklassen sind bewusst leer und
-enthalten nur Kommentare als Platzhalter für noch zu schreibende Fälle (z.B.
-`ErstelleAuMeldungCommandHandlerTest`, `AuMeldungTest`) — diese Kommentare sind Aufgabenbeschreibung,
-nicht toter Code. Mockito ist derzeit **nicht** als Dependency eingebunden, obwohl Kommentare es
-vorsehen; bei Bedarf ergänzen.
+AU-Meldung: wird nur gespeichert, wenn Anspruch besteht. Das Ergebnis ist ein `MeldungsErgebnis`
+(`Gespeichert` / `Abgelehnt` mit Grund), kein `void` -- damit Nebenszenario 1 (Error-Queue)
+anschließbar wäre. Die Queue selbst ist nicht umgesetzt.
+
+Erwartete Testfälle zum Stichtag 05.08.2026: Kurt hat Anspruch (aktive Beschäftigung), Angie hat
+Anspruch (16, Kind von Kurt), Eberhard hat keinen (24), Maria hat keinen (Ehepartnerin ohne eigene
+Zeit -- Ehepartner-Mitversicherung ist keine Regel dieser Iterationen).
+
+**Achtung bei den Testdaten:** Die SVNR-Konstanten in `at.gepardec.dojo.test.TestData` weichen von
+den in `doc/testcases.md` genannten Nummern ab (`SVNR_EBERHARD`/`SVNR_ANGIE` sind gegenüber der
+Doku vertauscht). Die Stub-Services sind in sich konsistent mit `TestData` -- immer die Konstanten
+verwenden, nie die Nummern aus der Doku abtippen.
+
+## Arbeitsweise
+
+### Dojo-Ablauf
+
+Der Sensei stellt pro Iteration neue Geschäftsregeln vor. Diese werden **zuerst in die Doku-Dateien
+eingefügt** (`doc/UseCase_*.md`, `doc/GeschäftsRegeln_*.md`), dann implementiert, und am Ende der
+Iteration wird alles gemeinsam committed -- Doku + Code in einem Commit. Der Zweck ist
+Nachvollziehbarkeit: welche Pakete mussten für welche Anforderungsänderung angefasst werden.
+Niemals Code ohne die zugehörige Doku-Änderung committen.
+
+### OpenSpec
+
+Dieser Branch nutzt OpenSpec (`openspec/`, CLI installiert). Die drei umgesetzten Changes liegen
+unter `openspec/changes/archive/`, die abgeleiteten Capability-Specs unter `openspec/specs/`
+(`anspruch-pruefung`, `au-meldung`).
+
+```bash
+openspec list                 # aktive Changes
+openspec list --specs         # Capabilities
+openspec validate --all --strict
+openspec new change "<name>"  # Artefakte: proposal → specs → design → tasks
+openspec archive <name>       # erst dadurch wandern Deltas in openspec/specs/
+```
+
+Für eine neue Iteration: eigener Change, nicht in einen bestehenden hineinschreiben. Ein Change pro
+Anforderungsänderung ist genau das, was den Dojo-Zweck (welche Pakete ändern sich?) messbar macht.
+Bei `MODIFIED Requirements` muss die Überschrift **exakt** der bestehenden entsprechen, sonst geht
+beim Archivieren Inhalt verloren.
+
+### Tests
+
+Jede Testmethode prüft etwas -- keine leeren Rümpfe als Platzhalter. Randfälle, die in den anderen
+Lösungen falsch sind und hier abgesichert bleiben müssen: genau an der Altersgrenze (kein
+Anspruch), unbekannte SVNR (kein Anspruch statt NullPointerException), Stichtag in der Zukunft.
+
+ArchUnit-Hinweis: `src/test/resources/archunit.properties` setzt `archRule.failOnEmptyShould=false`,
+damit Regeln auf noch leere Pakete zutreffen dürfen.
