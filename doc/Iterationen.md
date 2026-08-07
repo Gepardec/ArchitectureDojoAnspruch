@@ -76,7 +76,7 @@ Eine Versicherungszeit ist aktiv, wenn das `bis`-Datum `null` ist.
 Krankmeldungen bzw. Arbeitsunfähiglkeit (AU) ist in der SV ein Bereich des Leistungswesen. 
 Technisch wird es von der Applikation Leistung abgearbeitet.
 
-# Iteration 4: AU-Fälle düffen nur bei aktiven Anspruch gespeichert werden
+# Iteration 4: AU-Fälle dürfen nur bei aktiven Anspruch gespeichert werden
 
 ## Geschäftsregel
 Ergänzung der Regeln für Arbeitsunfähigkeit:
@@ -108,7 +108,7 @@ Konstanten wie Altersgrenze für Kinder (18 Jahre) sind Teil eines umfangreichen
 durch die Fachabteilung geändert werden können.
    * Die Altersgrenze 18 soll aus einer Datenbank ausgelesen werden. 
 
-Iteration 7: Teststabilität
+# Iteration 7: Teststabilität
 
 ## Architekturvorgabe
 Die Testfälle sollen in ein paar Jahren auch noch gehen. Dazu muss das aktuelle Datum (Tagesdatum)
