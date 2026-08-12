@@ -2,7 +2,7 @@ package at.gepardec.dojo.anspruch.uc;
 
 import at.gepardec.dojo.application.Application;
 import at.gepardec.dojo.test.TestData;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,7 +11,7 @@ public class WebCheckUseCaseTest {
 
     private AnspruchWebCheck anspruch;
 
-    @BeforeAll
+    @BeforeEach
     void setUp() {
         Application.init();
         anspruch = new AnspruchWebCheck();
