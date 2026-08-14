@@ -1,4 +1,4 @@
-package at.gepardec.dojo.anspruch.domain;
+package at.gepardec.dojo.shared.domain;
 
 public class Svnr {
     private final String svnr;

@@ -1,6 +1,7 @@
 package at.gepardec.dojo.anspruch.domain;
 
 import at.gepardec.dojo.anspruch.ports.DomainPortFactory;
+import at.gepardec.dojo.shared.domain.Svnr;
 import at.gepardec.dojo.test.TestData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

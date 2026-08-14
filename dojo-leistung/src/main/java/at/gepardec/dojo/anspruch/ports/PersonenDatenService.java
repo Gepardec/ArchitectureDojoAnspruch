@@ -1,6 +1,6 @@
 package at.gepardec.dojo.anspruch.ports;
 
-import at.gepardec.dojo.anspruch.domain.Svnr;
+import at.gepardec.dojo.shared.domain.Svnr;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -2,7 +2,7 @@ package at.gepardec.dojo.anspruch.adapters;
 
 import at.gepardec.dojo.angehoerige.AngehoerigeService;
 import at.gepardec.dojo.angehoerige.AngehoerigenBeziehung;
-import at.gepardec.dojo.anspruch.domain.Svnr;
+import at.gepardec.dojo.shared.domain.Svnr;
 import at.gepardec.dojo.anspruch.ports.PersonenDatenService;
 import at.gepardec.dojo.personen.PersonenService;
 

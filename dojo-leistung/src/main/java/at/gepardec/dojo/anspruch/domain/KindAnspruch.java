@@ -4,6 +4,7 @@ import at.gepardec.dojo.anspruch.ports.AnspruchRegeln;
 import at.gepardec.dojo.anspruch.ports.DomainPortFactory;
 import at.gepardec.dojo.anspruch.ports.PersonenDatenService;
 import at.gepardec.dojo.anspruch.ports.SystemDaten;
+import at.gepardec.dojo.shared.domain.Svnr;
 
 import java.time.LocalDate;
 import java.time.Period;

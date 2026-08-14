@@ -1,6 +1,6 @@
 package at.gepardec.dojo.anspruch.adapters;
 
-import at.gepardec.dojo.anspruch.domain.Svnr;
+import at.gepardec.dojo.shared.domain.Svnr;
 import at.gepardec.dojo.anspruch.domain.ZeitenStrecke;
 import at.gepardec.dojo.anspruch.ports.ZeitenService;
 

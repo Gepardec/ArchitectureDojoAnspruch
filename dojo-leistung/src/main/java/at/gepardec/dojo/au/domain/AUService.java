@@ -1,7 +1,7 @@
 package at.gepardec.dojo.au.domain;
 
 import at.gepardec.dojo.anspruch.domain.AnspruchService;
-import at.gepardec.dojo.anspruch.domain.Svnr;
+import at.gepardec.dojo.shared.domain.Svnr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
