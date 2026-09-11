@@ -24,5 +24,6 @@ class SvnrValidatorTest {
         log.info( "Generated SVNR: {}", SvnrValidator.generateSvnr("130985"));
         log.info( "Generated SVNR: {}", SvnrValidator.generateSvnr("240710"));
         log.info( "Generated SVNR: {}", SvnrValidator.generateSvnr("010402"));
+        log.info( "Generated SVNR: {}", SvnrValidator.generateSvnr("310761"));
     }
 }

@@ -7,6 +7,7 @@ Vater [Kurt](https://www.youtube.com/watch?v=BrPcg8y2-5E) arbeitet in einem Säg
 
 Die Tochter [Angie](https://www.youtube.com/watch?v=oWRr03VcA-0) wohnt mit 16 noch bei den Eltern und geht zur Schule. 
 Der Sohn Eberhard ist 24 Jahre alt, hat sich mit den Eltern zerstritten und nie was gearbeitet. Er wohnt als [Sandlerkönig Eberhard](https://www.youtube.com/watch?v=Ha-ROALzCYM) auf der Straße.
+Und dann gibts da noch die [Omama](https://www.youtube.com/watch?v=1FC9xT3EGgE).
 
 ## Personendaten
 
@@ -16,6 +17,7 @@ Der Sohn Eberhard ist 24 Jahre alt, hat sich mit den Eltern zerstritten und nie 
    * aktuell beschäftigt seit: 01.09.2022
    * verheiratet mit Maria Leonhardsberger
    * Vater von Angie und Eberhard Leonhardsberger
+   * Kind von Omama Leonhardsberger
 
 ### Maria Leonhardsberger
    * Versicherungsnummer: 1174130985
@@ -35,6 +37,12 @@ Der Sohn Eberhard ist 24 Jahre alt, hat sich mit den Eltern zerstritten und nie 
    * Geburtsdatum: 24.07.2010
    * aktuell nicht beschäftigt
    * Kind von Maria und Kurt Leonhardsberger
+
+### Omama Leonhardsberger
+* Versicherungsnummer: 1411310761
+* Geburtsdatum: 31.07.1961
+* aktuell nicht beschäftigt
+* Mutter von Kurt Leonhardsberger
 
 ## Implmentierungshilfe
 

@@ -1,5 +1,6 @@
 package at.gepardec.dojo.angehoerige;
 
+import at.gepardec.dojo.log.Performance;
 import at.gepardec.dojo.test.TestData;
 
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 public class AngehoerigeService {
 
     public List<AngehoerigenBeziehung> getAngehoerigenBeziehung(String svnr) {
+        Performance.logExternalCall("getAngehoerigenBeziehung", svnr);
         switch (svnr) {
             case TestData.SVNR_ANGIE -> {
                 ArrayList<AngehoerigenBeziehung> eltern = new ArrayList<>();
@@ -34,10 +36,14 @@ public class AngehoerigeService {
                 beziehungen.add(new AngehoerigenBeziehung(TestData.SVNR_KURT, TestData.SVNR_MARIA, AngehoerigenBeziehung.ANG_TYP_EHEPARTNER));
                 beziehungen.add(new AngehoerigenBeziehung(TestData.SVNR_KURT, TestData.SVNR_ANGIE, AngehoerigenBeziehung.ANG_TYP_KIND));
                 beziehungen.add(new AngehoerigenBeziehung(TestData.SVNR_KURT, TestData.SVNR_EBERHARD, AngehoerigenBeziehung.ANG_TYP_KIND));
+                beziehungen.add(new AngehoerigenBeziehung(TestData.SVNR_KURT, TestData.SVNR_OMAMA, AngehoerigenBeziehung.ANG_TYP_ELTERNTEIL));
                 return beziehungen;
             }
-            
-
+            case TestData.SVNR_OMAMA -> {
+                ArrayList<AngehoerigenBeziehung> beziehungen = new ArrayList<>();
+                beziehungen.add(new AngehoerigenBeziehung(TestData.SVNR_OMAMA, TestData.SVNR_KURT, AngehoerigenBeziehung.ANG_TYP_KIND));
+                return beziehungen;
+            }
         }
         return Collections.emptyList();
     }
