@@ -1,5 +1,6 @@
 package at.gepardec.dojo.zeiten;
 
+import at.gepardec.dojo.log.Performance;
 import at.gepardec.dojo.test.TestData;
 
 import java.time.LocalDate;
@@ -12,6 +13,8 @@ import java.util.List;
  */
 public class ZeitenService {
     public List<VersicherungsZeit> getVersicherungsZeiten(String svnr) {
+
+        Performance.logExternalCall("getVersicherungsZeiten", svnr);
         switch (svnr){
             case TestData.SVNR_KURT -> {
                 return zeitenKurt();

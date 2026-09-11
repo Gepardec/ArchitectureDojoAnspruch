@@ -1,5 +1,6 @@
 package at.gepardec.dojo.personen;
 
+import at.gepardec.dojo.log.Performance;
 import at.gepardec.dojo.test.TestData;
 
 import java.time.LocalDate;
@@ -7,6 +8,7 @@ import java.time.LocalDate;
 public class PersonenService {
 
     public Person getPerson(String svnr) {
+        Performance.logExternalCall("getPerson", svnr);
 
         switch (svnr){
             case TestData.SVNR_KURT -> {
@@ -24,6 +26,10 @@ public class PersonenService {
             case TestData.SVNR_ANGIE -> {
                 return new Person("Angie", "Leonhardsberger",
                         LocalDate.of(2010, 7, 24));
+            }
+            case TestData.SVNR_OMAMA -> {
+                return new Person("Omama", "Leonhardsberger",
+                        LocalDate.of(1961, 7, 31));
             }
 
         }
