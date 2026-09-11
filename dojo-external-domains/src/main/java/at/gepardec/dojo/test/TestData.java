@@ -17,6 +17,7 @@ public class TestData {
             case SVNR_MARIA -> "Maria";
             case SVNR_EBERHARD -> "Eberhard";
             case SVNR_ANGIE -> "Angie";
+            case SVNR_OMAMA -> "Omama";
             default -> "Unbekannte Svnr";
         };
     }
